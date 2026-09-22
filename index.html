@@ -104,6 +104,11 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
 .chk input{width:18px;height:18px;accent-color:var(--brand)}
 .hint{font-size:13px;color:var(--muted);margin-top:10px;text-align:center}
 .hint a{color:var(--brand2)}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.qamt{padding:9px 4px;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:12px;font-weight:600}
+.qamt:hover{border-color:var(--brand)}
+.balance{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;margin-bottom:6px}
+.balance b{font-size:24px;display:block;margin-top:2px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:99;display:none}
 </style>
 </head>
@@ -225,7 +230,7 @@ function isSessionError(err) { return /đăng nhập lại/.test(err.message); }
 
 function renderUser() {
   const u = user();
-  $('#userChip').textContent = u ? '👤 ' + u.name : '';
+  $('#userChip').textContent = u ? '👤 ' + u.name + ' · ' + money(u.balance || 0) : '';
   $('#btnLogin').textContent = u ? 'Tài khoản' : 'Đăng nhập';
 }
 
@@ -267,17 +272,90 @@ function showAuth(mode = 'login', next) {
   };
 }
 
+// Ghi số dư mới từ máy chủ vào phiên đang lưu + hiện lại trên giao diện
+function updateBalance(bal) {
+  const s = getSession();
+  if (!s) return;
+  s.customer.balance = bal;
+  for (const st of webStores()) { try { if (st.getItem(LS_SESSION)) st.setItem(LS_SESSION, JSON.stringify(s)); } catch {} }
+  mem[LS_SESSION] = s;
+  renderUser();
+}
+
+function showTopup(next, suggested) {
+  openModal(`
+    <h2>Nạp tiền vào ví</h2>
+    <p class="sub">Nạp 1 lần, mua bao nhiêu món cũng được — không cần chờ quét mã từng đơn.</p>
+    <form id="fTopup">
+      <label>Số tiền muốn nạp</label>
+      <input name="amount" required inputmode="numeric" placeholder="Ví dụ 100000" value="${suggested || ''}">
+      <div class="quick">${[50000, 100000, 200000, 500000].map(v => `<button type="button" class="qamt" data-v="${v}">${money(v)}</button>`).join('')}</div>
+      <div class="err" id="tErr"></div>
+      <button class="btn pri block" type="submit">Lấy mã QR nạp tiền</button>
+    </form>`);
+  $('#modal').querySelectorAll('.qamt').forEach(b => b.onclick = () => { $('#fTopup input[name=amount]').value = b.dataset.v; });
+  $('#fTopup').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; $('#tErr').textContent = '';
+    try {
+      const amount = Number(new FormData(e.target).get('amount').replace(/\D/g, ''));
+      const r = await apiPost({ action: 'topup', session: getSession().token, amount });
+      showTopupPay(r, next);
+    } catch (err) {
+      if (isSessionError(err)) { clearSession(); renderUser(); return showAuth('login', () => showTopup(next, suggested)); }
+      $('#tErr').textContent = err.message; btn.disabled = false;
+    }
+  };
+}
+
+function showTopupPay(o, next) {
+  openModal(`
+    <h2>Quét mã để nạp tiền</h2>
+    <p class="sub">Mã nạp <b>${esc(o.code)}</b></p>
+    <div class="qr"><img src="${qrUrl(o)}" alt="Mã QR nạp tiền"></div>
+    <div class="row"><span>Ngân hàng</span><b>MB Bank</b></div>
+    <div class="row"><span>Số tài khoản</span><b>${esc(o.bank.account)}<button class="copy" data-copy="${esc(o.bank.account)}">Chép</button></b></div>
+    <div class="row"><span>Chủ tài khoản</span><b>${esc(o.bank.name)}</b></div>
+    <div class="row"><span>Số tiền</span><b>${money(o.amount)}<button class="copy" data-copy="${o.amount}">Chép</button></b></div>
+    <div class="row"><span>Nội dung CK</span><b style="color:var(--brand2)">${esc(o.code)}<button class="copy" data-copy="${esc(o.code)}">Chép</button></b></div>
+    <div class="note">Nhập <b>đúng nội dung ${esc(o.code)}</b> và <b>đúng số tiền</b> để hệ thống tự cộng vào ví. Quét QR thì đã điền sẵn.</div>
+    <div class="wait"><div class="spin"></div><span>Đang chờ tiền về…</span></div>
+    <a class="btn block" style="margin-top:12px" href="${ZALO}" target="_blank" rel="noopener">Cần hỗ trợ? Nhắn Zalo</a>`);
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const s = await apiGet({ action: 'topupstatus', code: o.code, token: o.token }, 1);
+      if (s.status === 'Đã cộng ví') {
+        clearInterval(pollTimer); pollTimer = null;
+        updateBalance(s.balance);
+        openModal(`<div class="done"><div class="ic">🎉</div><h2 style="padding:0">Đã cộng ví thành công</h2>
+          <p class="sub">+${money(o.amount)} · Số dư hiện tại: <b>${money(s.balance)}</b></p></div>
+          <button class="btn pri block" id="topupOk">OK</button>`);
+        $('#topupOk').onclick = () => { closeModal(); if (next) next(); };
+      } else if (s.status === 'Chuyển thiếu') {
+        clearInterval(pollTimer); pollTimer = null;
+        const note = $('#modal .note'); if (note) note.innerHTML = '⚠️ Shop đã nhận tiền nhưng <b>chưa đủ</b>. Vui lòng nhắn Zalo shop để được xử lý.';
+      }
+    } catch {}
+  }, 5000);
+    } catch (err) { $('#aErr').textContent = err.message; btn.disabled = false; }
+  };
+}
+
 function showAccount() {
   const u = user();
   if (!u) return showAuth('login', null);
   openModal(`
     <h2>Tài khoản của bạn</h2>
-    <p class="sub">Cần đổi thông tin hoặc mật khẩu, nhắn Zalo shop.</p>
+    <div class="balance"><span>Số dư ví</span><b>${money(u.balance || 0)}</b></div>
+    <button class="btn pri block" id="accTopup">Nạp tiền</button>
+    <p class="sub" style="margin-top:14px">Cần đổi thông tin hoặc mật khẩu, nhắn Zalo shop.</p>
     <div class="row"><span>Họ tên</span><b>${esc(u.name)}</b></div>
     <div class="row"><span>SĐT / Zalo</span><b>${esc(u.phone)}</b></div>
     <div class="row"><span>Gmail</span><b>${esc(u.email)}</b></div>
-    <button class="btn pri block" style="margin-top:16px" id="accOrders">Xem đơn của tôi</button>
+    <button class="btn block" style="margin-top:16px" id="accOrders">Xem đơn của tôi</button>
     <button class="btn block" style="margin-top:8px" id="btnLogout">Đăng xuất</button>`);
+  $('#accTopup').onclick = () => showTopup();
   $('#accOrders').onclick = () => $('#btnOrders').click();
   $('#btnLogout').onclick = () => {
     const s = getSession();
@@ -338,33 +416,39 @@ function renderList() {
   $('#list').querySelectorAll('[data-buy]').forEach(b => b.onclick = () => startBuy(b.dataset.buy));
 }
 
-// ===== Mua hàng =====
+// ===== Mua hàng (trừ thẳng vào ví) =====
 function startBuy(id) {
   const p = DATA.products.find(x => x.id === id);
   if (!user()) return showAuth('login', () => startBuy(id));
   const u = user();
+  const enough = (u.balance || 0) >= p.price;
   openModal(`
     <h2>${esc(p.name)}</h2>
     <p class="sub">${esc([p.duration !== '-' ? p.duration : '', p.warranty].filter(Boolean).join(' · '))}</p>
-    <div class="sum"><span>Thanh toán</span><b>${money(p.price)}</b></div>
+    <div class="sum"><span>Giá</span><b>${money(p.price)}</b></div>
+    <div class="row"><span>Số dư ví hiện tại</span><b>${money(u.balance || 0)}</b></div>
     <form id="fBuy">
-      <div class="row"><span>Người mua</span><b>${esc(u.name)} · ${esc(u.phone)}</b></div>
       ${p.need ? `<label>${esc(p.need)} *</label><input name="extra" required maxlength="300">` : `<label>Ghi chú cho shop (không bắt buộc)</label><input name="extra" maxlength="300">`}
-      <div class="err" id="bErr"></div>
-      <button class="btn pri block" type="submit">Tạo đơn & lấy mã QR</button>
+      <div class="err" id="bErr">${enough ? '' : 'Số dư không đủ, cần nạp thêm ' + money(p.price - (u.balance || 0)) + '.'}</div>
+      ${enough
+        ? `<button class="btn pri block" type="submit">Xác nhận mua — trừ ${money(p.price)} trong ví</button>`
+        : `<button class="btn pri block" type="button" id="btnGoTopup">Nạp thêm ${money(p.price - (u.balance || 0))} rồi mua</button>`}
     </form>`);
+  if (!enough) { $('#btnGoTopup').onclick = () => showTopup(() => startBuy(id), p.price - (u.balance || 0)); return; }
   $('#fBuy').onsubmit = async e => {
     e.preventDefault();
-    const btn = e.target.querySelector('.pri'); btn.disabled = true; btn.textContent = 'Đang tạo đơn…'; $('#bErr').textContent = '';
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; btn.textContent = 'Đang xử lý…'; $('#bErr').textContent = '';
     try {
       const o = await apiPost({ action: 'order', productId: id, session: getSession().token, extra: new FormData(e.target).get('extra') });
+      updateBalance(o.balance);
       const list = store.get(LS_ORDERS, []);
       list.unshift({ code: o.code, token: o.token, product: o.product, amount: o.amount, at: Date.now() });
       store.set(LS_ORDERS, list.slice(0, 30));
       showPay(o);
     } catch (err) {
       if (isSessionError(err)) { clearSession(); renderUser(); return showAuth('login', () => startBuy(id)); }
-      $('#bErr').textContent = err.message; btn.disabled = false; btn.textContent = 'Tạo đơn & lấy mã QR';
+      if (/không đủ/.test(err.message)) { closeModal(); return showTopup(() => startBuy(id), p.price - (u.balance || 0)); }
+      $('#bErr').textContent = err.message; btn.disabled = false; btn.textContent = 'Xác nhận mua — trừ ' + money(p.price) + ' trong ví';
     }
   };
 }
