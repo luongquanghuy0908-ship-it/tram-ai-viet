@@ -33,7 +33,8 @@ header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-f
 .btn.block{width:100%;padding:14px}
 .btn:disabled{opacity:.6;cursor:wait}
 .logo{white-space:nowrap}
-@media(max-width:420px){.logo{font-size:16px}.logo i{width:30px;height:30px}.nav-r .btn{padding:8px 10px;font-size:13px}.user-chip{display:none}.perk{padding:10px 12px}}
+@media(max-width:420px){.logo{font-size:16px}.logo i{width:30px;height:30px}.nav-r .btn{padding:8px 10px;font-size:13px}.user-chip{display:none}.perk{padding:10px 12px}.long{display:none}.nav{gap:8px}.nav-r{gap:6px}}
+@media(max-width:340px){.logo{font-size:0;gap:0}}
 .user-chip{font-size:13px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hero{padding:40px 0 20px;text-align:center}
 .badge{display:inline-block;padding:6px 12px;border-radius:99px;background:rgba(109,93,252,.15);border:1px solid rgba(109,93,252,.4);color:#c4bdff;font-size:13px;font-weight:600}
@@ -103,7 +104,7 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
     <a class="logo" href="./"><i>⚡</i>Trạm AI Việt</a>
     <div class="nav-r">
       <span class="user-chip" id="userChip"></span>
-      <button class="btn" id="btnOrders">Đơn của tôi</button>
+      <button class="btn" id="btnOrders">Đơn<span class="long"> của tôi</span></button>
       <button class="btn pri" id="btnLogin">Đăng nhập</button>
     </div>
   </div>
@@ -154,18 +155,29 @@ const store = {
 
 let DATA = null, CAT = 'Tất cả', pollTimer = null, afterLogin = null;
 
-async function apiGet(params) {
-  const r = await fetch(API + '?' + new URLSearchParams(params));
-  const j = await r.json();
-  if (j.error) throw new Error(j.error);
-  return j;
+// Apps Script đôi khi treo rất lâu → tự huỷ để còn thử lại
+async function fetchJson(url, opt = {}, ms = 20000) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  try {
+    const r = await fetch(url, { ...opt, signal: ac.signal });
+    const j = await r.json();
+    if (j.error) { const e = new Error(j.error); e.server = true; throw e; }
+    return j;
+  } catch (e) {
+    if (e.server) throw e;
+    throw new Error('Mạng chậm, vui lòng thử lại');
+  } finally { clearTimeout(t); }
 }
-async function apiPost(body) {
+async function apiGet(params, tries = 3) {
+  for (let i = 1; ; i++) {
+    try { return await fetchJson(API + '?' + new URLSearchParams(params)); }
+    catch (e) { if (e.server || i >= tries) throw e; }
+  }
+}
+function apiPost(body) {
   // text/plain để trình duyệt không gửi preflight (Apps Script không hỗ trợ)
-  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
-  const j = await r.json();
-  if (j.error) throw new Error(j.error);
-  return j;
+  return fetchJson(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }, 30000);
 }
 
 function toast(msg) {
@@ -223,14 +235,17 @@ function showLogin(next) {
 $('#btnLogin').onclick = () => showLogin();
 
 // ===== Sản phẩm =====
-async function loadProducts(attempt = 1) {
+const LS_PRODUCTS = 'tav_products';
+async function loadProducts() {
+  // Hiện ngay danh sách lần trước (giá/kho có thể cũ vài phút), rồi cập nhật
+  const cached = store.get(LS_PRODUCTS, null);
+  if (cached && cached.products) { DATA = cached; renderCats(); renderList(); }
   try {
-    DATA = await apiGet({ action: 'products' });
+    DATA = await apiGet({ action: 'products' }, 4);
+    store.set(LS_PRODUCTS, DATA);
     renderCats(); renderList();
   } catch (err) {
-    // Apps Script lâu không có ai gọi thì lần đầu hay lỗi/chậm
-    if (attempt < 3) return setTimeout(() => loadProducts(attempt + 1), 1500);
-    $('#list').innerHTML = `<div class="empty">Không tải được sản phẩm. <a href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo shop</a></div>`;
+    if (!cached) $('#list').innerHTML = `<div class="empty">Không tải được sản phẩm. <a href="#" onclick="location.reload();return false">Tải lại</a> hoặc <a href="${ZALO}" target="_blank" rel="noopener">nhắn Zalo shop</a></div>`;
   }
 }
 function groups() { return [...new Set(DATA.products.map(p => p.group))]; }
@@ -340,13 +355,15 @@ function showDone(o) {
 
 function startPoll(o) {
   clearInterval(pollTimer);
-  let last = o.status;
+  let last = o.status, busy = false;
   pollTimer = setInterval(async () => {
+    if (busy) return;
+    busy = true;
     try {
-      const s = await apiGet({ action: 'status', code: o.code, token: o.token });
+      const s = await apiGet({ action: 'status', code: o.code, token: o.token }, 1);
       s.token = o.token;
       if (s.status !== last) { last = s.status; showPay(s); }
-    } catch {}
+    } catch {} finally { busy = false; }
   }, 5000);
 }
 
