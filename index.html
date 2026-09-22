@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trạm AI Việt – Tài khoản AI giá tốt, nhận hàng tự động</title>
+<meta name="description" content="ChatGPT Plus, Gemini Pro, CapCut Pro, Canva Pro, Proxy. Thanh toán QR, nhận hàng tự động 24/7, bảo hành rõ ràng.">
+<meta property="og:title" content="Trạm AI Việt – Tài khoản AI giá tốt">
+<meta property="og:description" content="Thanh toán QR – nhận hàng tự động 24/7 – bảo hành rõ ràng.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b1020;--bg2:#111833;--card:#151d3b;--line:#26305a;--text:#eef1ff;--muted:#9aa4cf;
+  --brand:#6d5dfc;--brand2:#22d3ee;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;
+  background-image:radial-gradient(900px 500px at 10% -10%,rgba(109,93,252,.25),transparent 60%),radial-gradient(700px 400px at 100% 0,rgba(34,211,238,.15),transparent 60%)}
+a{color:inherit}
+button{font-family:inherit;cursor:pointer;border:0}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:60px;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;text-decoration:none}
+.logo i{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-style:normal;font-size:16px}
+.nav-r{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;background:var(--bg2);color:var(--text);border:1px solid var(--line);text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--brand)}
+.btn.pri{background:linear-gradient(135deg,var(--brand),#8b5cf6);border:0;color:#fff}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.block{width:100%;padding:14px}
+.btn:disabled{opacity:.6;cursor:wait}
+.logo{white-space:nowrap}
+@media(max-width:420px){.logo{font-size:16px}.logo i{width:30px;height:30px}.nav-r .btn{padding:8px 10px;font-size:13px}.user-chip{display:none}.perk{padding:10px 12px}}
+.user-chip{font-size:13px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hero{padding:40px 0 20px;text-align:center}
+.badge{display:inline-block;padding:6px 12px;border-radius:99px;background:rgba(109,93,252,.15);border:1px solid rgba(109,93,252,.4);color:#c4bdff;font-size:13px;font-weight:600}
+.hero h1{font-size:clamp(28px,5vw,44px);font-weight:800;margin:14px 0 10px;line-height:1.2}
+.hero h1 span{background:linear-gradient(90deg,var(--brand2),#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);max-width:620px;margin:0 auto}
+.perks{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:24px 0 8px}
+.perk{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;text-align:left}
+.perk b{display:block;font-size:15px}
+.perk small{color:var(--muted)}
+.cats{display:flex;gap:8px;overflow-x:auto;padding:18px 0 6px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{padding:8px 14px;border-radius:99px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:14px;white-space:nowrap}
+.cat.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.group-title{margin:22px 0 10px;font-size:18px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:10px;transition:.15s}
+.card:hover{border-color:rgba(109,93,252,.7);transform:translateY(-2px)}
+.card h3{font-size:16px;font-weight:700;line-height:1.35}
+.meta{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;padding:3px 8px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);color:var(--muted)}
+.tag.g{color:#86efac;border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
+.tag.y{color:#fcd34d;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.price{font-size:22px;font-weight:800;margin-top:auto}
+.price small{font-size:13px;color:var(--muted);font-weight:500}
+.empty,.loading{color:var(--muted);text-align:center;padding:40px 0}
+footer{margin-top:50px;border-top:1px solid var(--line);padding:24px 0 40px;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(3,6,18,.75);backdrop-filter:blur(4px);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.ov.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:460px;max-height:92vh;overflow-y:auto;padding:20px 18px 24px;position:relative}
+@media(min-width:600px){.ov{align-items:center}.modal{border-radius:20px}}
+.x{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:10px;background:var(--card);color:var(--muted);font-size:18px}
+.modal h2{font-size:19px;margin-bottom:4px;padding-right:40px}
+.sub{color:var(--muted);font-size:14px;margin-bottom:14px}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 6px}
+input,textarea{width:100%;padding:12px 14px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--text);font-family:inherit;font-size:15px}
+input:focus,textarea:focus{outline:none;border-color:var(--brand)}
+.err{color:#fca5a5;font-size:14px;margin-top:10px;min-height:20px}
+.sum{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px}
+.sum b{font-size:18px}
+.qr{background:#fff;border-radius:14px;padding:10px;text-align:center;margin:12px 0}
+.qr img{width:100%;max-width:280px;display:block;margin:0 auto}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.row span{color:var(--muted)}
+.row b{text-align:right;word-break:break-all}
+.copy{padding:4px 8px;border-radius:8px;background:var(--card);border:1px solid var(--line);color:var(--brand2);font-size:12px;font-weight:600;margin-left:6px}
+.note{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);color:#fde68a;border-radius:12px;padding:10px 12px;font-size:13px;margin-top:12px}
+.wait{display:flex;align-items:center;gap:10px;margin-top:14px;color:var(--muted);font-size:14px}
+.spin{width:18px;height:18px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brand2);animation:sp 1s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.done{text-align:center}
+.done .ic{font-size:44px}
+.deliver{background:var(--bg);border:1px solid var(--ok);border-radius:12px;padding:12px;white-space:pre-wrap;word-break:break-word;text-align:left;font-family:ui-monospace,Consolas,monospace;font-size:14px;margin:12px 0}
+.olist{display:flex;flex-direction:column;gap:8px}
+.oitem{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:left;color:var(--text);width:100%}
+.oitem small{color:var(--muted);display:block}
+.st{font-size:12px;font-weight:700}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:99;display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="./"><i>⚡</i>Trạm AI Việt</a>
+    <div class="nav-r">
+      <span class="user-chip" id="userChip"></span>
+      <button class="btn" id="btnOrders">Đơn của tôi</button>
+      <button class="btn pri" id="btnLogin">Đăng nhập</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="badge">Thanh toán QR · Nhận hàng tự động 24/7</span>
+    <h1>Tài khoản AI Premium <span>giá tốt, bảo hành rõ</span></h1>
+    <p>ChatGPT, Gemini, CapCut, Canva, Proxy... Quét mã chuyển khoản, hệ thống tự xác nhận và giao hàng — không cần chờ nhắn tin.</p>
+    <div class="perks">
+      <div class="perk"><b>⚡ Tự động 24/7</b><small>Tiền về là hệ thống xác nhận ngay, kể cả nửa đêm</small></div>
+      <div class="perk"><b>🛡️ Bảo hành rõ ràng</b><small>BHF = bảo hành full thời hạn</small></div>
+      <div class="perk"><b>🎁 Tặng tool video AI</b><small><a href="https://luongquanghuy0908-ship-it.github.io/qua-tang-ai/" target="_blank" rel="noopener">Nhận tool miễn phí →</a></small></div>
+    </div>
+  </section>
+
+  <div class="cats" id="cats"></div>
+  <div id="list"><div class="loading">Đang tải sản phẩm…</div></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>© Trạm AI Việt · Hỗ trợ trong suốt quá trình sử dụng</div>
+    <div>Zalo hỗ trợ: <a href="https://zalo.me/0338102653" target="_blank" rel="noopener">0338 102 653</a></div>
+  </div>
+</footer>
+
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// Dán URL web app Apps Script (kết thúc bằng /exec) vào đây
+const API = 'https://script.google.com/macros/s/AKfycbzV_KlAwzimsh1zEaaTZvO9zcxq5ZmQmTbye17b9NYYNJ1DqeHCT9o20xUXlES1dLNlUw/exec';
+const ZALO = 'https://zalo.me/0338102653';
+const LS_USER = 'tav_user', LS_ORDERS = 'tav_orders';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => Number(n).toLocaleString('vi-VN') + ' đ';
+// Bộ nhớ tạm dự phòng khi trình duyệt chặn localStorage (chế độ ẩn danh, một số app)
+const mem = {};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); if (v !== null) return JSON.parse(v); } catch {} return k in mem ? mem[k] : d; },
+  set(k, v) { mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { delete mem[k]; try { localStorage.removeItem(k); } catch {} },
+};
+
+let DATA = null, CAT = 'Tất cả', pollTimer = null, afterLogin = null;
+
+async function apiGet(params) {
+  const r = await fetch(API + '?' + new URLSearchParams(params));
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+async function apiPost(body) {
+  // text/plain để trình duyệt không gửi preflight (Apps Script không hỗ trợ)
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 1800);
+}
+function copyText(txt) {
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Đã sao chép'), () => {
+    const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Đã sao chép'); } catch {} ta.remove();
+  });
+}
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-copy]'); if (c) copyText(c.dataset.copy);
+});
+
+function openModal(html) { $('#modal').innerHTML = '<button class="x" aria-label="Đóng">✕</button>' + html; $('#ov').classList.add('show'); $('#modal .x').onclick = closeModal; }
+function closeModal() { $('#ov').classList.remove('show'); clearInterval(pollTimer); pollTimer = null; }
+$('#ov').addEventListener('click', e => { if (e.target.id === 'ov') closeModal(); });
+
+// ===== Đăng nhập =====
+function user() { return store.get(LS_USER, null); }
+function renderUser() {
+  const u = user();
+  $('#userChip').textContent = u ? '👤 ' + u.name : '';
+  $('#btnLogin').textContent = u ? 'Tài khoản' : 'Đăng nhập';
+}
+function showLogin(next) {
+  afterLogin = next || null;
+  const u = user() || {};
+  openModal(`
+    <h2>${u.phone ? 'Thông tin của bạn' : 'Đăng nhập'}</h2>
+    <p class="sub">Điền 1 lần, lần sau vào là shop nhận ra bạn. Shop dùng số Zalo để hỗ trợ và bảo hành.</p>
+    <form id="fLogin">
+      <label>Họ tên</label><input name="name" required maxlength="60" value="${esc(u.name)}" placeholder="Nguyễn Văn A">
+      <label>Số điện thoại / Zalo</label><input name="contact" required inputmode="tel" value="${esc(u.phone)}" placeholder="09xx xxx xxx">
+      <label>Gmail</label><input name="email" type="email" required value="${esc(u.email)}" placeholder="ban@gmail.com">
+      <div class="err" id="lErr"></div>
+      <button class="btn pri block" type="submit">${u.phone ? 'Lưu thông tin' : 'Đăng nhập'}</button>
+      ${u.phone ? '<button class="btn block" type="button" id="btnLogout" style="margin-top:8px">Đăng xuất khỏi máy này</button>' : ''}
+    </form>`);
+  $('#fLogin').onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target), btn = e.target.querySelector('.pri');
+    btn.disabled = true; $('#lErr').textContent = '';
+    try {
+      const r = await apiPost({ action: 'login', name: f.get('name'), contact: f.get('contact'), email: f.get('email') });
+      store.set(LS_USER, r.customer); renderUser();
+      if (afterLogin) { const n = afterLogin; afterLogin = null; n(); } else { closeModal(); toast('Xin chào ' + r.customer.name); }
+    } catch (err) { $('#lErr').textContent = err.message; btn.disabled = false; }
+  };
+  const lo = $('#btnLogout');
+  if (lo) lo.onclick = () => { store.del(LS_USER); renderUser(); closeModal(); };
+}
+$('#btnLogin').onclick = () => showLogin();
+
+// ===== Sản phẩm =====
+async function loadProducts(attempt = 1) {
+  try {
+    DATA = await apiGet({ action: 'products' });
+    renderCats(); renderList();
+  } catch (err) {
+    // Apps Script lâu không có ai gọi thì lần đầu hay lỗi/chậm
+    if (attempt < 3) return setTimeout(() => loadProducts(attempt + 1), 1500);
+    $('#list').innerHTML = `<div class="empty">Không tải được sản phẩm. <a href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo shop</a></div>`;
+  }
+}
+function groups() { return [...new Set(DATA.products.map(p => p.group))]; }
+function renderCats() {
+  $('#cats').innerHTML = ['Tất cả', ...groups()].map(g => `<button class="cat ${g === CAT ? 'on' : ''}" data-cat="${esc(g)}">${esc(g)}</button>`).join('');
+  $('#cats').querySelectorAll('.cat').forEach(b => b.onclick = () => { CAT = b.dataset.cat; renderCats(); renderList(); });
+}
+function card(p) {
+  const stock = p.price > 0 ? (p.stock > 0 ? `<span class="tag g">Còn ${p.stock} · giao ngay</span>` : `<span class="tag y">Giao trong 5–30 phút</span>`) : '';
+  const act = p.price > 0
+    ? `<button class="btn pri block" data-buy="${esc(p.id)}">Mua ngay</button>`
+    : `<a class="btn block" href="${ZALO}" target="_blank" rel="noopener">Liên hệ Zalo</a>`;
+  return `<div class="card">
+    <h3>${esc(p.name)}</h3>
+    <div class="meta">${p.duration && p.duration !== '-' ? `<span class="tag">⏱ ${esc(p.duration)}</span>` : ''}${p.warranty ? `<span class="tag">🛡 ${esc(p.warranty)}</span>` : ''}${stock}</div>
+    <div class="price">${p.price > 0 ? money(p.price) : 'Liên hệ'}</div>
+    ${act}
+  </div>`;
+}
+function renderList() {
+  const gs = CAT === 'Tất cả' ? groups() : [CAT];
+  $('#list').innerHTML = gs.map(g => {
+    const items = DATA.products.filter(p => p.group === g);
+    return items.length ? `<h2 class="group-title">${esc(g)}</h2><div class="grid">${items.map(card).join('')}</div>` : '';
+  }).join('') || '<div class="empty">Chưa có sản phẩm</div>';
+  $('#list').querySelectorAll('[data-buy]').forEach(b => b.onclick = () => startBuy(b.dataset.buy));
+}
+
+// ===== Mua hàng =====
+function startBuy(id) {
+  const p = DATA.products.find(x => x.id === id);
+  if (!user()) return showLogin(() => startBuy(id));
+  const u = user();
+  openModal(`
+    <h2>${esc(p.name)}</h2>
+    <p class="sub">${esc([p.duration !== '-' ? p.duration : '', p.warranty].filter(Boolean).join(' · '))}</p>
+    <div class="sum"><span>Thanh toán</span><b>${money(p.price)}</b></div>
+    <form id="fBuy">
+      <div class="row"><span>Người mua</span><b>${esc(u.name)} · ${esc(u.phone)}</b></div>
+      ${p.need ? `<label>${esc(p.need)} *</label><input name="extra" required maxlength="300">` : `<label>Ghi chú cho shop (không bắt buộc)</label><input name="extra" maxlength="300">`}
+      <div class="err" id="bErr"></div>
+      <button class="btn pri block" type="submit">Tạo đơn & lấy mã QR</button>
+    </form>`);
+  $('#fBuy').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; btn.textContent = 'Đang tạo đơn…'; $('#bErr').textContent = '';
+    try {
+      const o = await apiPost({ action: 'order', productId: id, name: u.name, contact: u.phone, email: u.email, extra: new FormData(e.target).get('extra') });
+      const list = store.get(LS_ORDERS, []);
+      list.unshift({ code: o.code, token: o.token, product: o.product, amount: o.amount, at: Date.now() });
+      store.set(LS_ORDERS, list.slice(0, 30));
+      showPay(o);
+    } catch (err) { $('#bErr').textContent = err.message; btn.disabled = false; btn.textContent = 'Tạo đơn & lấy mã QR'; }
+  };
+}
+
+function qrUrl(o) {
+  const b = o.bank;
+  return `https://img.vietqr.io/image/${encodeURIComponent(b.bin)}-${encodeURIComponent(b.account)}-compact2.png?amount=${o.amount}&addInfo=${encodeURIComponent(o.code)}&accountName=${encodeURIComponent(b.name)}`;
+}
+
+function showPay(o) {
+  if (o.status === 'Đã giao') return showDone(o);
+  const paid = o.status === 'Đã thanh toán - chờ giao';
+  const short = o.status === 'Chuyển thiếu';
+  if (paid) return showPaidWaiting(o);
+  openModal(`
+    <h2>Quét mã để thanh toán</h2>
+    <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)}</p>
+    <div class="qr"><img src="${qrUrl(o)}" alt="Mã QR thanh toán"></div>
+    <div class="row"><span>Ngân hàng</span><b>MB Bank</b></div>
+    <div class="row"><span>Số tài khoản</span><b>${esc(o.bank.account)}<button class="copy" data-copy="${esc(o.bank.account)}">Chép</button></b></div>
+    <div class="row"><span>Chủ tài khoản</span><b>${esc(o.bank.name)}</b></div>
+    <div class="row"><span>Số tiền</span><b>${money(o.amount)}<button class="copy" data-copy="${o.amount}">Chép</button></b></div>
+    <div class="row"><span>Nội dung CK</span><b style="color:var(--brand2)">${esc(o.code)}<button class="copy" data-copy="${esc(o.code)}">Chép</button></b></div>
+    <div class="note">${short ? '⚠️ Shop đã nhận tiền nhưng <b>chưa đủ</b>. Vui lòng nhắn Zalo shop để được xử lý.' : 'Nhập <b>đúng nội dung ' + esc(o.code) + '</b> và <b>đúng số tiền</b> để hệ thống tự xác nhận. Quét QR thì đã điền sẵn.'}</div>
+    <div class="wait"><div class="spin"></div><span id="wTxt">Đang chờ tiền về… (bạn có thể đóng trang, mở lại ở “Đơn của tôi”)</span></div>
+    <a class="btn block" style="margin-top:12px" href="${ZALO}" target="_blank" rel="noopener">Cần hỗ trợ? Nhắn Zalo</a>`);
+  startPoll(o);
+}
+
+function showPaidWaiting(o) {
+  openModal(`
+    <div class="done">
+      <div class="ic">✅</div>
+      <h2 style="padding:0">Đã nhận tiền!</h2>
+      <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)}<br>Shop đang chuẩn bị hàng, thường trong 5–30 phút. Trang này tự cập nhật khi có hàng.</p>
+      <div class="wait" style="justify-content:center"><div class="spin"></div><span>Đang chờ shop giao…</span></div>
+      <a class="btn block" style="margin-top:14px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo kèm mã ${esc(o.code)}</a>
+    </div>`);
+  startPoll(o);
+}
+
+function showDone(o) {
+  clearInterval(pollTimer); pollTimer = null;
+  openModal(`
+    <div class="done">
+      <div class="ic">🎉</div>
+      <h2 style="padding:0">Giao hàng thành công</h2>
+      <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)}</p>
+    </div>
+    <div class="deliver">${esc(o.content)}</div>
+    <button class="btn pri block" data-copy="${esc(o.content)}">Sao chép thông tin</button>
+    <div class="note">Lưu lại thông tin này. Đơn luôn xem lại được ở “Đơn của tôi” trên máy này. Cần bảo hành, nhắn Zalo kèm mã đơn.</div>
+    <a class="btn block" style="margin-top:10px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo shop</a>`);
+}
+
+function startPoll(o) {
+  clearInterval(pollTimer);
+  let last = o.status;
+  pollTimer = setInterval(async () => {
+    try {
+      const s = await apiGet({ action: 'status', code: o.code, token: o.token });
+      s.token = o.token;
+      if (s.status !== last) { last = s.status; showPay(s); }
+    } catch {}
+  }, 5000);
+}
+
+// ===== Đơn của tôi =====
+$('#btnOrders').onclick = async () => {
+  const list = store.get(LS_ORDERS, []);
+  if (!list.length) return openModal('<h2>Đơn của tôi</h2><p class="sub">Máy này chưa có đơn nào.</p>');
+  openModal(`<h2>Đơn của tôi</h2><p class="sub">Bấm vào đơn để xem chi tiết.</p>
+    <div class="olist">${list.map((o, i) => `<button class="oitem" data-i="${i}"><b>${esc(o.code)}</b> · ${money(o.amount)}<small>${esc(o.product)}</small><span class="st" id="st${i}">…</span></button>`).join('')}</div>`);
+  document.querySelectorAll('.oitem').forEach(b => b.onclick = async () => {
+    const o = list[b.dataset.i];
+    try { const s = await apiGet({ action: 'status', code: o.code, token: o.token }); s.token = o.token; showPay(s); }
+    catch (err) { toast(err.message); }
+  });
+  list.forEach(async (o, i) => {
+    try {
+      const s = await apiGet({ action: 'status', code: o.code, token: o.token });
+      const el = document.getElementById('st' + i); if (!el) return;
+      el.textContent = s.status;
+      el.style.color = s.status === 'Đã giao' ? 'var(--ok)' : s.status === 'Chờ thanh toán' ? 'var(--muted)' : 'var(--warn)';
+    } catch {}
+  });
+};
+
+renderUser();
+loadProducts();
+</script>
+</body>
+</html>
