@@ -94,6 +94,16 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
 .oitem{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:left;color:var(--text);width:100%}
 .oitem small{color:var(--muted);display:block}
 .st{font-size:12px;font-weight:700}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px;margin:4px 0 6px}
+.tab{padding:10px;border-radius:9px;background:transparent;color:var(--muted);font-weight:700;font-size:14px}
+.tab.on{background:var(--card);color:var(--text)}
+.pw{position:relative}
+.pw input{padding-right:64px}
+.eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:6px 10px;border-radius:8px;background:var(--card);color:var(--muted);font-size:12px;font-weight:600}
+.chk{display:flex;align-items:center;gap:10px;margin:14px 0 4px;font-size:14px;font-weight:500;cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:var(--brand)}
+.hint{font-size:13px;color:var(--muted);margin-top:10px;text-align:center}
+.hint a{color:var(--brand2)}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:99;display:none}
 </style>
 </head>
@@ -140,7 +150,7 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
 // Dán URL web app Apps Script (kết thúc bằng /exec) vào đây
 const API = 'https://script.google.com/macros/s/AKfycbzV_KlAwzimsh1zEaaTZvO9zcxq5ZmQmTbye17b9NYYNJ1DqeHCT9o20xUXlES1dLNlUw/exec';
 const ZALO = 'https://zalo.me/0338102653';
-const LS_USER = 'tav_user', LS_ORDERS = 'tav_orders';
+const LS_SESSION = 'tav_session', LS_ORDERS = 'tav_orders';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -150,7 +160,6 @@ const mem = {};
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); if (v !== null) return JSON.parse(v); } catch {} return k in mem ? mem[k] : d; },
   set(k, v) { mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
-  del(k) { delete mem[k]; try { localStorage.removeItem(k); } catch {} },
 };
 
 let DATA = null, CAT = 'Tất cả', pollTimer = null, afterLogin = null;
@@ -198,41 +207,96 @@ function openModal(html) { $('#modal').innerHTML = '<button class="x" aria-label
 function closeModal() { $('#ov').classList.remove('show'); clearInterval(pollTimer); pollTimer = null; }
 $('#ov').addEventListener('click', e => { if (e.target.id === 'ov') closeModal(); });
 
-// ===== Đăng nhập =====
-function user() { return store.get(LS_USER, null); }
+// ===== Tài khoản =====
+// "Ghi nhớ" → localStorage (còn sau khi tắt trình duyệt); không ghi nhớ → sessionStorage
+function webStores() { const a = []; try { a.push(localStorage); } catch {} try { a.push(sessionStorage); } catch {} return a; }
+function getSession() {
+  for (const s of webStores()) { try { const v = s.getItem(LS_SESSION); if (v) return JSON.parse(v); } catch {} }
+  return mem[LS_SESSION] || null;
+}
+function setSession(v, remember) {
+  clearSession();
+  mem[LS_SESSION] = v;
+  try { (remember ? localStorage : sessionStorage).setItem(LS_SESSION, JSON.stringify(v)); } catch {}
+}
+function clearSession() { delete mem[LS_SESSION]; webStores().forEach(s => { try { s.removeItem(LS_SESSION); } catch {} }); }
+function user() { const s = getSession(); return s ? s.customer : null; }
+function isSessionError(err) { return /đăng nhập lại/.test(err.message); }
+
 function renderUser() {
   const u = user();
   $('#userChip').textContent = u ? '👤 ' + u.name : '';
   $('#btnLogin').textContent = u ? 'Tài khoản' : 'Đăng nhập';
 }
-function showLogin(next) {
-  afterLogin = next || null;
-  const u = user() || {};
+
+const pwField = (name, auto, ph) => `<div class="pw"><input name="${name}" type="password" required minlength="6" maxlength="64" autocomplete="${auto}" placeholder="${ph}"><button type="button" class="eye">Hiện</button></div>`;
+
+function showAuth(mode = 'login', next) {
+  if (next !== undefined) afterLogin = next;
+  const reg = mode === 'register';
   openModal(`
-    <h2>${u.phone ? 'Thông tin của bạn' : 'Đăng nhập'}</h2>
-    <p class="sub">Điền 1 lần, lần sau vào là shop nhận ra bạn. Shop dùng số Zalo để hỗ trợ và bảo hành.</p>
-    <form id="fLogin">
-      <label>Họ tên</label><input name="name" required maxlength="60" value="${esc(u.name)}" placeholder="Nguyễn Văn A">
-      <label>Số điện thoại / Zalo</label><input name="contact" required inputmode="tel" value="${esc(u.phone)}" placeholder="09xx xxx xxx">
-      <label>Gmail</label><input name="email" type="email" required value="${esc(u.email)}" placeholder="ban@gmail.com">
-      <div class="err" id="lErr"></div>
-      <button class="btn pri block" type="submit">${u.phone ? 'Lưu thông tin' : 'Đăng nhập'}</button>
-      ${u.phone ? '<button class="btn block" type="button" id="btnLogout" style="margin-top:8px">Đăng xuất khỏi máy này</button>' : ''}
+    <h2>${reg ? 'Tạo tài khoản' : 'Đăng nhập'}</h2>
+    <div class="tabs"><button type="button" class="tab ${reg ? '' : 'on'}" data-mode="login">Đăng nhập</button><button type="button" class="tab ${reg ? 'on' : ''}" data-mode="register">Tạo tài khoản</button></div>
+    <form id="fAuth" autocomplete="on">
+      ${reg ? `<label>Họ tên</label><input name="name" required maxlength="60" autocomplete="name" placeholder="Nguyễn Văn A">` : ''}
+      <label>Số điện thoại / Zalo</label><input name="contact" required inputmode="tel" autocomplete="username" placeholder="09xx xxx xxx">
+      ${reg ? `<label>Gmail</label><input name="email" type="email" required autocomplete="email" placeholder="ban@gmail.com">` : ''}
+      <label>Mật khẩu</label>${pwField('password', reg ? 'new-password' : 'current-password', reg ? 'Ít nhất 6 ký tự' : 'Mật khẩu của bạn')}
+      <label class="chk"><input type="checkbox" name="remember" checked> Ghi nhớ đăng nhập trên máy này</label>
+      <div class="err" id="aErr"></div>
+      <button class="btn pri block" type="submit">${reg ? 'Tạo tài khoản' : 'Đăng nhập'}</button>
+      <p class="hint">${reg ? 'Đã có tài khoản? <a href="#" data-mode="login">Đăng nhập</a>' : 'Chưa có tài khoản? <a href="#" data-mode="register">Tạo tài khoản</a> · Quên mật khẩu? <a href="' + ZALO + '" target="_blank" rel="noopener">Nhắn Zalo shop</a>'}</p>
     </form>`);
-  $('#fLogin').onsubmit = async e => {
+  $('#modal').querySelectorAll('[data-mode]').forEach(b => b.onclick = e => { e.preventDefault(); showAuth(b.dataset.mode); });
+  $('#modal').querySelectorAll('.eye').forEach(b => b.onclick = () => {
+    const i = b.previousElementSibling; const show = i.type === 'password';
+    i.type = show ? 'text' : 'password'; b.textContent = show ? 'Ẩn' : 'Hiện';
+  });
+  $('#fAuth').onsubmit = async e => {
     e.preventDefault();
-    const f = new FormData(e.target), btn = e.target.querySelector('.pri');
-    btn.disabled = true; $('#lErr').textContent = '';
+    const f = new FormData(e.target), btn = e.target.querySelector('.pri'), remember = f.get('remember') === 'on';
+    btn.disabled = true; $('#aErr').textContent = '';
     try {
-      const r = await apiPost({ action: 'login', name: f.get('name'), contact: f.get('contact'), email: f.get('email') });
-      store.set(LS_USER, r.customer); renderUser();
+      const body = { action: reg ? 'register' : 'login', contact: f.get('contact'), password: f.get('password'), remember };
+      if (reg) { body.name = f.get('name'); body.email = f.get('email'); }
+      const r = await apiPost(body);
+      setSession({ token: r.session, customer: r.customer }, remember);
+      renderUser();
       if (afterLogin) { const n = afterLogin; afterLogin = null; n(); } else { closeModal(); toast('Xin chào ' + r.customer.name); }
-    } catch (err) { $('#lErr').textContent = err.message; btn.disabled = false; }
+    } catch (err) { $('#aErr').textContent = err.message; btn.disabled = false; }
   };
-  const lo = $('#btnLogout');
-  if (lo) lo.onclick = () => { store.del(LS_USER); renderUser(); closeModal(); };
 }
-$('#btnLogin').onclick = () => showLogin();
+
+function showAccount() {
+  const u = user();
+  if (!u) return showAuth('login', null);
+  openModal(`
+    <h2>Tài khoản của bạn</h2>
+    <p class="sub">Cần đổi thông tin hoặc mật khẩu, nhắn Zalo shop.</p>
+    <div class="row"><span>Họ tên</span><b>${esc(u.name)}</b></div>
+    <div class="row"><span>SĐT / Zalo</span><b>${esc(u.phone)}</b></div>
+    <div class="row"><span>Gmail</span><b>${esc(u.email)}</b></div>
+    <button class="btn pri block" style="margin-top:16px" id="accOrders">Xem đơn của tôi</button>
+    <button class="btn block" style="margin-top:8px" id="btnLogout">Đăng xuất</button>`);
+  $('#accOrders').onclick = () => $('#btnOrders').click();
+  $('#btnLogout').onclick = () => {
+    const s = getSession();
+    if (s) apiPost({ action: 'logout', session: s.token }).catch(() => {});
+    clearSession(); renderUser(); closeModal(); toast('Đã đăng xuất');
+  };
+}
+$('#btnLogin').onclick = () => user() ? showAccount() : showAuth('login', null);
+
+async function checkSession() {
+  const s = getSession();
+  if (!s) return;
+  try {
+    const r = await apiPost({ action: 'me', session: s.token });
+    s.customer = r.customer;
+    for (const st of webStores()) { try { if (st.getItem(LS_SESSION)) st.setItem(LS_SESSION, JSON.stringify(s)); } catch {} }
+    renderUser();
+  } catch (err) { if (isSessionError(err)) { clearSession(); renderUser(); } }
+}
 
 // ===== Sản phẩm =====
 const LS_PRODUCTS = 'tav_products';
@@ -277,7 +341,7 @@ function renderList() {
 // ===== Mua hàng =====
 function startBuy(id) {
   const p = DATA.products.find(x => x.id === id);
-  if (!user()) return showLogin(() => startBuy(id));
+  if (!user()) return showAuth('login', () => startBuy(id));
   const u = user();
   openModal(`
     <h2>${esc(p.name)}</h2>
@@ -293,12 +357,15 @@ function startBuy(id) {
     e.preventDefault();
     const btn = e.target.querySelector('.pri'); btn.disabled = true; btn.textContent = 'Đang tạo đơn…'; $('#bErr').textContent = '';
     try {
-      const o = await apiPost({ action: 'order', productId: id, name: u.name, contact: u.phone, email: u.email, extra: new FormData(e.target).get('extra') });
+      const o = await apiPost({ action: 'order', productId: id, session: getSession().token, extra: new FormData(e.target).get('extra') });
       const list = store.get(LS_ORDERS, []);
       list.unshift({ code: o.code, token: o.token, product: o.product, amount: o.amount, at: Date.now() });
       store.set(LS_ORDERS, list.slice(0, 30));
       showPay(o);
-    } catch (err) { $('#bErr').textContent = err.message; btn.disabled = false; btn.textContent = 'Tạo đơn & lấy mã QR'; }
+    } catch (err) {
+      if (isSessionError(err)) { clearSession(); renderUser(); return showAuth('login', () => startBuy(id)); }
+      $('#bErr').textContent = err.message; btn.disabled = false; btn.textContent = 'Tạo đơn & lấy mã QR';
+    }
   };
 }
 
@@ -369,8 +436,19 @@ function startPoll(o) {
 
 // ===== Đơn của tôi =====
 $('#btnOrders').onclick = async () => {
-  const list = store.get(LS_ORDERS, []);
-  if (!list.length) return openModal('<h2>Đơn của tôi</h2><p class="sub">Máy này chưa có đơn nào.</p>');
+  let list = store.get(LS_ORDERS, []);
+  const s = getSession();
+  if (s) {
+    openModal('<h2>Đơn của tôi</h2><div class="wait"><div class="spin"></div><span>Đang tải đơn…</span></div>');
+    try { list = (await apiPost({ action: 'myorders', session: s.token })).orders; }
+    catch (err) { if (isSessionError(err)) { clearSession(); renderUser(); } }
+  }
+  if (!list.length) {
+    openModal(`<h2>Đơn của tôi</h2><p class="sub">${s ? 'Tài khoản này chưa có đơn nào.' : 'Máy này chưa có đơn nào. <a href="#" id="goLogin" style="color:var(--brand2)">Đăng nhập</a> để xem đơn trên mọi máy.'}</p>`);
+    const g = $('#goLogin');
+    if (g) g.onclick = e => { e.preventDefault(); showAuth('login', null); };
+    return;
+  }
   openModal(`<h2>Đơn của tôi</h2><p class="sub">Bấm vào đơn để xem chi tiết.</p>
     <div class="olist">${list.map((o, i) => `<button class="oitem" data-i="${i}"><b>${esc(o.code)}</b> · ${money(o.amount)}<small>${esc(o.product)}</small><span class="st" id="st${i}">…</span></button>`).join('')}</div>`);
   document.querySelectorAll('.oitem').forEach(b => b.onclick = async () => {
@@ -390,6 +468,7 @@ $('#btnOrders').onclick = async () => {
 
 renderUser();
 loadProducts();
+checkSession();
 </script>
 </body>
 </html>
