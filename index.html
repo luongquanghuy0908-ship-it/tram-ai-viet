@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trạm AI Việt – Tài khoản AI giá tốt, nhận hàng tự động</title>
+<meta name="description" content="ChatGPT Plus, Gemini Pro, CapCut Pro, Canva Pro, Proxy. Thanh toán QR, nhận hàng tự động 24/7, bảo hành rõ ràng.">
+<meta property="og:title" content="Trạm AI Việt – Tài khoản AI giá tốt">
+<meta property="og:description" content="Thanh toán QR – nhận hàng tự động 24/7 – bảo hành rõ ràng.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b1020;--bg2:#111833;--card:#151d3b;--line:#26305a;--text:#eef1ff;--muted:#9aa4cf;
+  --brand:#6d5dfc;--brand2:#22d3ee;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;
+  background-image:radial-gradient(900px 500px at 10% -10%,rgba(109,93,252,.25),transparent 60%),radial-gradient(700px 400px at 100% 0,rgba(34,211,238,.15),transparent 60%)}
+a{color:inherit}
+button{font-family:inherit;cursor:pointer;border:0}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:60px;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;text-decoration:none}
+.logo i{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-style:normal;font-size:16px}
+.nav-r{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;background:var(--bg2);color:var(--text);border:1px solid var(--line);text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--brand)}
+.btn.pri{background:linear-gradient(135deg,var(--brand),#8b5cf6);border:0;color:#fff}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.block{width:100%;padding:14px}
+.btn:disabled{opacity:.6;cursor:wait}
+.logo{white-space:nowrap}
+@media(max-width:420px){.logo{font-size:16px}.logo i{width:30px;height:30px}.nav-r .btn{padding:8px 10px;font-size:13px}.user-chip{display:none}.perk{padding:10px 12px}.long{display:none}.nav{gap:8px}.nav-r{gap:6px}}
+@media(max-width:340px){.logo{font-size:0;gap:0}}
+.user-chip{font-size:13px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hero{padding:40px 0 20px;text-align:center}
+.badge{display:inline-block;padding:6px 12px;border-radius:99px;background:rgba(109,93,252,.15);border:1px solid rgba(109,93,252,.4);color:#c4bdff;font-size:13px;font-weight:600}
+.hero h1{font-size:clamp(28px,5vw,44px);font-weight:800;margin:14px 0 10px;line-height:1.2}
+.hero h1 span{background:linear-gradient(90deg,var(--brand2),#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);max-width:620px;margin:0 auto}
+.perks{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:24px 0 8px}
+.perk{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;text-align:left}
+.perk b{display:block;font-size:15px}
+.perk small{color:var(--muted)}
+.cats{display:flex;gap:8px;overflow-x:auto;padding:18px 0 6px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{padding:8px 14px;border-radius:99px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:14px;white-space:nowrap}
+.cat.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.group-title{margin:22px 0 10px;font-size:18px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:10px;transition:.15s}
+.card:hover{border-color:rgba(109,93,252,.7);transform:translateY(-2px)}
+.card h3{font-size:16px;font-weight:700;line-height:1.35}
+.meta{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;padding:3px 8px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);color:var(--muted)}
+.tag.g{color:#86efac;border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
+.tag.y{color:#fcd34d;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.price{font-size:22px;font-weight:800;margin-top:auto}
+.price small{font-size:13px;color:var(--muted);font-weight:500}
+.empty,.loading{color:var(--muted);text-align:center;padding:40px 0}
+footer{margin-top:50px;border-top:1px solid var(--line);padding:24px 0 40px;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(3,6,18,.75);backdrop-filter:blur(4px);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.ov.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:460px;max-height:92vh;overflow-y:auto;padding:20px 18px 24px;position:relative}
+@media(min-width:600px){.ov{align-items:center}.modal{border-radius:20px}}
+.x{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:10px;background:var(--card);color:var(--muted);font-size:18px}
+.modal h2{font-size:19px;margin-bottom:4px;padding-right:40px}
+.sub{color:var(--muted);font-size:14px;margin-bottom:14px}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 6px}
+input,textarea{width:100%;padding:12px 14px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--text);font-family:inherit;font-size:15px}
+input:focus,textarea:focus{outline:none;border-color:var(--brand)}
+.err{color:#fca5a5;font-size:14px;margin-top:10px;min-height:20px}
+.sum{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px}
+.sum b{font-size:18px}
+.qr{background:#fff;border-radius:14px;padding:10px;text-align:center;margin:12px 0}
+.qr img{width:100%;max-width:280px;display:block;margin:0 auto}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.row span{color:var(--muted)}
+.row b{text-align:right;word-break:break-all}
+.copy{padding:4px 8px;border-radius:8px;background:var(--card);border:1px solid var(--line);color:var(--brand2);font-size:12px;font-weight:600;margin-left:6px}
+.note{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);color:#fde68a;border-radius:12px;padding:10px 12px;font-size:13px;margin-top:12px}
+.wait{display:flex;align-items:center;gap:10px;margin-top:14px;color:var(--muted);font-size:14px}
+.spin{width:18px;height:18px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brand2);animation:sp 1s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.done{text-align:center}
+.done .ic{font-size:44px}
+.deliver{background:var(--bg);border:1px solid var(--ok);border-radius:12px;padding:12px;white-space:pre-wrap;word-break:break-word;text-align:left;font-family:ui-monospace,Consolas,monospace;font-size:14px;margin:12px 0}
+.olist{display:flex;flex-direction:column;gap:8px}
+.oitem{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:left;color:var(--text);width:100%}
+.oitem small{color:var(--muted);display:block}
+.st{font-size:12px;font-weight:700}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px;margin:4px 0 6px}
+.tab{padding:10px;border-radius:9px;background:transparent;color:var(--muted);font-weight:700;font-size:14px}
+.tab.on{background:var(--card);color:var(--text)}
+.pw{position:relative}
+.pw input{padding-right:64px}
+.eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:6px 10px;border-radius:8px;background:var(--card);color:var(--muted);font-size:12px;font-weight:600}
+.chk{display:flex;align-items:center;gap:10px;margin:14px 0 4px;font-size:14px;font-weight:500;cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:var(--brand)}
+.hint{font-size:13px;color:var(--muted);margin-top:10px;text-align:center}
+.hint a{color:var(--brand2)}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.qamt{padding:9px 4px;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:12px;font-weight:600}
+.qamt:hover{border-color:var(--brand)}
+.balance{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;margin-bottom:6px}
+.balance b{font-size:24px;display:block;margin-top:2px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:99;display:none}
+.tiers{display:flex;flex-direction:column;gap:6px;margin:2px 0 4px}
+.tier{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:13px}
+.tier input{accent-color:var(--brand);width:16px;height:16px;flex:none}
+.tier span{flex:1;color:var(--text)}
+.tier b{font-size:14px}
+.tier.on{border-color:var(--brand);background:rgba(109,93,252,.1)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="./"><i>⚡</i>Trạm AI Việt</a>
+    <div class="nav-r">
+      <span class="user-chip" id="userChip"></span>
+      <button class="btn" id="btnGuide"><span class="long">Hướng dẫn </span>mua hàng</button>
+      <button class="btn" id="btnOrders">Đơn<span class="long"> của tôi</span></button>
+      <button class="btn pri" id="btnLogin">Đăng nhập</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="badge">Thanh toán QR · Nhận hàng tự động 24/7</span>
+    <h1>Tài khoản AI Premium <span>giá tốt, bảo hành rõ</span></h1>
+    <p>ChatGPT, Gemini, CapCut, Canva, Proxy... Quét mã chuyển khoản, hệ thống tự xác nhận và giao hàng — không cần chờ nhắn tin.</p>
+    <div class="perks">
+      <div class="perk"><b>⚡ Tự động 24/7</b><small>Tiền về là hệ thống xác nhận ngay, kể cả nửa đêm</small></div>
+      <div class="perk"><b>🛡️ Bảo hành rõ ràng</b><small>BHF = bảo hành full thời hạn</small></div>
+      <div class="perk"><b>🎁 Tặng tool video AI</b><small><a href="https://luongquanghuy0908-ship-it.github.io/qua-tang-ai/" target="_blank" rel="noopener">Nhận tool miễn phí →</a></small></div>
+    </div>
+  </section>
+
+  <div class="cats" id="cats"></div>
+  <div id="list"><div class="loading">Đang tải sản phẩm…</div></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>© Trạm AI Việt · Hỗ trợ trong suốt quá trình sử dụng</div>
+    <div>Zalo hỗ trợ: <a href="https://zalo.me/0338102653" target="_blank" rel="noopener">0338 102 653</a></div>
+  </div>
+</footer>
+
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// Dán URL web app Apps Script (kết thúc bằng /exec) vào đây
+const API = 'https://script.google.com/macros/s/AKfycbzV_KlAwzimsh1zEaaTZvO9zcxq5ZmQmTbye17b9NYYNJ1DqeHCT9o20xUXlES1dLNlUw/exec';
+const ZALO = 'https://zalo.me/0338102653';
+const LS_SESSION = 'tav_session', LS_ORDERS = 'tav_orders';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => Number(n).toLocaleString('vi-VN') + ' đ';
+// Bộ nhớ tạm dự phòng khi trình duyệt chặn localStorage (chế độ ẩn danh, một số app)
+const mem = {};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); if (v !== null) return JSON.parse(v); } catch {} return k in mem ? mem[k] : d; },
+  set(k, v) { mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+let DATA = null, CAT = 'Tất cả', pollTimer = null, afterLogin = null;
+
+// Apps Script đôi khi treo rất lâu → tự huỷ để còn thử lại
+async function fetchJson(url, opt = {}, ms = 20000) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  try {
+    const r = await fetch(url, { ...opt, signal: ac.signal });
+    const j = await r.json();
+    if (j.error) { const e = new Error(j.error); e.server = true; throw e; }
+    return j;
+  } catch (e) {
+    if (e.server) throw e;
+    throw new Error('Mạng chậm, vui lòng thử lại');
+  } finally { clearTimeout(t); }
+}
+async function apiGet(params, tries = 3) {
+  for (let i = 1; ; i++) {
+    try { return await fetchJson(API + '?' + new URLSearchParams(params)); }
+    catch (e) { if (e.server || i >= tries) throw e; }
+  }
+}
+function apiPost(body) {
+  // text/plain để trình duyệt không gửi preflight (Apps Script không hỗ trợ)
+  return fetchJson(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }, 30000);
+}
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 1800);
+}
+function copyText(txt) {
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Đã sao chép'), () => {
+    const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Đã sao chép'); } catch {} ta.remove();
+  });
+}
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-copy]'); if (c) copyText(c.dataset.copy);
+});
+
+function openModal(html) { $('#modal').innerHTML = '<button class="x" aria-label="Đóng">✕</button>' + html; $('#ov').classList.add('show'); $('#modal .x').onclick = closeModal; }
+function closeModal() { $('#ov').classList.remove('show'); clearInterval(pollTimer); pollTimer = null; }
+$('#ov').addEventListener('click', e => { if (e.target.id === 'ov') closeModal(); });
+
+// ===== Tài khoản =====
+// "Ghi nhớ" → localStorage (còn sau khi tắt trình duyệt); không ghi nhớ → sessionStorage
+function webStores() { const a = []; try { a.push(localStorage); } catch {} try { a.push(sessionStorage); } catch {} return a; }
+function getSession() {
+  for (const s of webStores()) { try { const v = s.getItem(LS_SESSION); if (v) return JSON.parse(v); } catch {} }
+  return mem[LS_SESSION] || null;
+}
+function setSession(v, remember) {
+  clearSession();
+  mem[LS_SESSION] = v;
+  try { (remember ? localStorage : sessionStorage).setItem(LS_SESSION, JSON.stringify(v)); } catch {}
+}
+function clearSession() { delete mem[LS_SESSION]; webStores().forEach(s => { try { s.removeItem(LS_SESSION); } catch {} }); }
+function user() { const s = getSession(); return s ? s.customer : null; }
+function isSessionError(err) { return /đăng nhập lại/.test(err.message); }
+
+function renderUser() {
+  const u = user();
+  $('#userChip').textContent = u ? '👤 ' + u.name + ' · ' + money(u.balance || 0) : '';
+  $('#btnLogin').textContent = u ? 'Tài khoản' : 'Đăng nhập';
+}
+
+const pwField = (name, auto, ph) => `<div class="pw"><input name="${name}" type="password" required minlength="6" maxlength="64" autocomplete="${auto}" placeholder="${ph}"><button type="button" class="eye">Hiện</button></div>`;
+
+function showAuth(mode = 'login', next) {
+  if (next !== undefined) afterLogin = next;
+  const reg = mode === 'register';
+  openModal(`
+    <h2>${reg ? 'Tạo tài khoản' : 'Đăng nhập'}</h2>
+    <div class="tabs"><button type="button" class="tab ${reg ? '' : 'on'}" data-mode="login">Đăng nhập</button><button type="button" class="tab ${reg ? 'on' : ''}" data-mode="register">Tạo tài khoản</button></div>
+    <form id="fAuth" autocomplete="on">
+      ${reg ? `<label>Họ tên</label><input name="name" required maxlength="60" autocomplete="name" placeholder="Nguyễn Văn A">` : ''}
+      <label>Số điện thoại / Zalo</label><input name="contact" required inputmode="tel" autocomplete="username" placeholder="09xx xxx xxx">
+      ${reg ? `<label>Gmail</label><input name="email" type="email" required autocomplete="email" placeholder="ban@gmail.com">` : ''}
+      <label>Mật khẩu</label>${pwField('password', reg ? 'new-password' : 'current-password', reg ? 'Ít nhất 6 ký tự' : 'Mật khẩu của bạn')}
+      <label class="chk"><input type="checkbox" name="remember" checked> Ghi nhớ đăng nhập trên máy này</label>
+      <div class="err" id="aErr"></div>
+      <button class="btn pri block" type="submit">${reg ? 'Tạo tài khoản' : 'Đăng nhập'}</button>
+      <p class="hint">${reg ? 'Đã có tài khoản? <a href="#" data-mode="login">Đăng nhập</a>' : 'Chưa có tài khoản? <a href="#" data-mode="register">Tạo tài khoản</a> · <a href="#" id="linkForgot">Quên mật khẩu?</a>'}</p>
+    </form>`);
+  $('#modal').querySelectorAll('[data-mode]').forEach(b => b.onclick = e => { e.preventDefault(); showAuth(b.dataset.mode); });
+  const lf = $('#linkForgot'); if (lf) lf.onclick = e => { e.preventDefault(); showForgotPassword(); };
+  $('#modal').querySelectorAll('.eye').forEach(b => b.onclick = () => {
+    const i = b.previousElementSibling; const show = i.type === 'password';
+    i.type = show ? 'text' : 'password'; b.textContent = show ? 'Ẩn' : 'Hiện';
+  });
+  $('#fAuth').onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target), btn = e.target.querySelector('.pri'), remember = f.get('remember') === 'on';
+    btn.disabled = true; $('#aErr').textContent = '';
+    try {
+      const body = { action: reg ? 'register' : 'login', contact: f.get('contact'), password: f.get('password'), remember };
+      if (reg) { body.name = f.get('name'); body.email = f.get('email'); }
+      const r = await apiPost(body);
+      setSession({ token: r.session, customer: r.customer }, remember);
+      renderUser();
+      if (afterLogin) { const n = afterLogin; afterLogin = null; n(); } else { closeModal(); toast('Xin chào ' + r.customer.name); }
+    } catch (err) { $('#aErr').textContent = err.message; btn.disabled = false; }
+  };
+}
+
+function showForgotPassword() {
+  openModal(`
+    <h2>Quên mật khẩu</h2>
+    <p class="sub">Nhập số điện thoại/Zalo đã đăng ký, hệ thống gửi mã 6 số vào Gmail đã đăng ký.</p>
+    <form id="fForgot">
+      <label>Số điện thoại / Zalo</label><input name="contact" required inputmode="tel" autocomplete="username" placeholder="09xx xxx xxx">
+      <div class="err" id="fErr"></div>
+      <button class="btn pri block" type="submit">Gửi mã xác nhận</button>
+      <p class="hint"><a href="#" id="backLogin">← Quay lại đăng nhập</a></p>
+    </form>`);
+  $('#backLogin').onclick = e => { e.preventDefault(); showAuth('login'); };
+  $('#fForgot').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; $('#fErr').textContent = '';
+    const contact = new FormData(e.target).get('contact');
+    try {
+      const r = await apiPost({ action: 'forgotpassword', contact });
+      showResetPassword(contact, r.email);
+    } catch (err) { $('#fErr').textContent = err.message; btn.disabled = false; }
+  };
+}
+
+function showResetPassword(contact, emailHint) {
+  openModal(`
+    <h2>Đặt lại mật khẩu</h2>
+    <p class="sub">Đã gửi mã 6 số tới <b>${esc(emailHint)}</b>. Mã có hiệu lực 10 phút.</p>
+    <form id="fReset">
+      <label>Mã xác nhận</label><input name="code" required inputmode="numeric" maxlength="6" placeholder="123456">
+      <label>Mật khẩu mới</label>${pwField('password', 'new-password', 'Ít nhất 6 ký tự')}
+      <div class="err" id="rErr"></div>
+      <button class="btn pri block" type="submit">Đặt lại mật khẩu</button>
+      <p class="hint"><a href="#" id="resendCode">Chưa nhận được mã? Gửi lại</a></p>
+    </form>`);
+  $('#modal').querySelectorAll('.eye').forEach(b => b.onclick = () => {
+    const i = b.previousElementSibling; const show = i.type === 'password';
+    i.type = show ? 'text' : 'password'; b.textContent = show ? 'Ẩn' : 'Hiện';
+  });
+  $('#resendCode').onclick = async e => {
+    e.preventDefault();
+    try { await apiPost({ action: 'forgotpassword', contact }); toast('Đã gửi lại mã'); }
+    catch (err) { toast(err.message); }
+  };
+  $('#fReset').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; $('#rErr').textContent = '';
+    const f = new FormData(e.target);
+    try {
+      const r = await apiPost({ action: 'resetpassword', contact, code: f.get('code'), password: f.get('password'), remember: true });
+      setSession({ token: r.session, customer: r.customer }, true);
+      renderUser();
+      closeModal();
+      toast('Đã đặt lại mật khẩu, xin chào ' + r.customer.name);
+    } catch (err) { $('#rErr').textContent = err.message; btn.disabled = false; }
+  };
+}
+
+// Ghi số dư mới từ máy chủ vào phiên đang lưu + hiện lại trên giao diện
+function updateBalance(bal) {
+  const s = getSession();
+  if (!s) return;
+  s.customer.balance = bal;
+  for (const st of webStores()) { try { if (st.getItem(LS_SESSION)) st.setItem(LS_SESSION, JSON.stringify(s)); } catch {} }
+  mem[LS_SESSION] = s;
+  renderUser();
+}
+
+function showTopup(next, suggested) {
+  openModal(`
+    <h2>Nạp tiền vào ví</h2>
+    <p class="sub">Nạp 1 lần, mua bao nhiêu món cũng được — không cần chờ quét mã từng đơn.</p>
+    <form id="fTopup">
+      <label>Số tiền muốn nạp</label>
+      <input name="amount" required inputmode="numeric" placeholder="Ví dụ 100000" value="${suggested || ''}">
+      <div class="quick">${[50000, 100000, 200000, 500000].map(v => `<button type="button" class="qamt" data-v="${v}">${money(v)}</button>`).join('')}</div>
+      <div class="err" id="tErr"></div>
+      <button class="btn pri block" type="submit">Lấy mã QR nạp tiền</button>
+    </form>`);
+  $('#modal').querySelectorAll('.qamt').forEach(b => b.onclick = () => { $('#fTopup input[name=amount]').value = b.dataset.v; });
+  $('#fTopup').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; $('#tErr').textContent = '';
+    try {
+      const amount = Number(new FormData(e.target).get('amount').replace(/\D/g, ''));
+      const r = await apiPost({ action: 'topup', session: getSession().token, amount });
+      showTopupPay(r, next);
+    } catch (err) {
+      if (isSessionError(err)) { clearSession(); renderUser(); return showAuth('login', () => showTopup(next, suggested)); }
+      $('#tErr').textContent = err.message; btn.disabled = false;
+    }
+  };
+}
+
+function showTopupPay(o, next) {
+  openModal(`
+    <h2>Quét mã để nạp tiền</h2>
+    <p class="sub">Mã nạp <b>${esc(o.code)}</b></p>
+    <div class="qr"><img src="${qrUrl(o)}" alt="Mã QR nạp tiền"></div>
+    <div class="row"><span>Ngân hàng</span><b>MB Bank</b></div>
+    <div class="row"><span>Số tài khoản</span><b>${esc(o.bank.account)}<button class="copy" data-copy="${esc(o.bank.account)}">Chép</button></b></div>
+    <div class="row"><span>Chủ tài khoản</span><b>${esc(o.bank.name)}</b></div>
+    <div class="row"><span>Số tiền</span><b>${money(o.amount)}<button class="copy" data-copy="${o.amount}">Chép</button></b></div>
+    <div class="row"><span>Nội dung CK</span><b style="color:var(--brand2)">${esc(o.code)}<button class="copy" data-copy="${esc(o.code)}">Chép</button></b></div>
+    <div class="note">Nhập <b>đúng nội dung ${esc(o.code)}</b> và <b>đúng số tiền</b> để hệ thống tự cộng vào ví. Quét QR thì đã điền sẵn.</div>
+    <div class="wait"><div class="spin"></div><span>Đang chờ tiền về…</span></div>
+    <a class="btn block" style="margin-top:12px" href="${ZALO}" target="_blank" rel="noopener">Cần hỗ trợ? Nhắn Zalo</a>`);
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const s = await apiGet({ action: 'topupstatus', code: o.code, token: o.token }, 1);
+      if (s.status === 'Đã cộng ví') {
+        clearInterval(pollTimer); pollTimer = null;
+        updateBalance(s.balance);
+        openModal(`<div class="done"><div class="ic">🎉</div><h2 style="padding:0">Đã cộng ví thành công</h2>
+          <p class="sub">+${money(o.amount)} · Số dư hiện tại: <b>${money(s.balance)}</b></p></div>
+          <button class="btn pri block" id="topupOk">OK</button>`);
+        $('#topupOk').onclick = () => { closeModal(); if (next) next(); };
+      } else if (s.status === 'Chuyển thiếu') {
+        clearInterval(pollTimer); pollTimer = null;
+        const note = $('#modal .note'); if (note) note.innerHTML = '⚠️ Shop đã nhận tiền nhưng <b>chưa đủ</b>. Vui lòng nhắn Zalo shop để được xử lý.';
+      }
+    } catch {}
+  }, 5000);
+}
+
+function showAccount() {
+  const u = user();
+  if (!u) return showAuth('login', null);
+  openModal(`
+    <h2>Tài khoản của bạn</h2>
+    <div class="balance"><span>Số dư ví</span><b>${money(u.balance || 0)}</b></div>
+    <button class="btn pri block" id="accTopup">Nạp tiền</button>
+    <p class="sub" style="margin-top:14px">Cần đổi thông tin hoặc mật khẩu, nhắn Zalo shop.</p>
+    <div class="row"><span>Họ tên</span><b>${esc(u.name)}</b></div>
+    <div class="row"><span>SĐT / Zalo</span><b>${esc(u.phone)}</b></div>
+    <div class="row"><span>Gmail</span><b>${esc(u.email)}</b></div>
+    <button class="btn block" style="margin-top:16px" id="accOrders">Xem đơn của tôi</button>
+    <button class="btn block" style="margin-top:8px" id="btnLogout">Đăng xuất</button>`);
+  $('#accTopup').onclick = () => showTopup();
+  $('#accOrders').onclick = () => $('#btnOrders').click();
+  $('#btnLogout').onclick = () => {
+    const s = getSession();
+    if (s) apiPost({ action: 'logout', session: s.token }).catch(() => {});
+    clearSession(); renderUser(); closeModal(); toast('Đã đăng xuất');
+  };
+}
+$('#btnLogin').onclick = () => user() ? showAccount() : showAuth('login', null);
+
+function showGuide() {
+  openModal(`
+    <h2>Hướng dẫn mua hàng</h2>
+    <p class="sub">4 bước đơn giản, tự động 24/7 — không cần chờ shop trả lời.</p>
+    <div class="olist">
+      <div class="oitem"><b>Bước 1 · Chọn sản phẩm</b><small>Bấm "Mua ngay" ở sản phẩm bạn muốn mua trên trang chủ.</small></div>
+      <div class="oitem"><b>Bước 2 · Đăng nhập / Tạo tài khoản</b><small>Dùng số điện thoại + mật khẩu. Tài khoản dùng để lưu ví tiền và xem lại đơn hàng trên mọi máy.</small></div>
+      <div class="oitem"><b>Bước 3 · Nạp tiền vào ví</b><small>Nạp 1 lần bằng chuyển khoản QR (đúng nội dung + đúng số tiền) — hệ thống tự cộng ví trong vài giây. Mua nhiều món chỉ cần nạp 1 lần.</small></div>
+      <div class="oitem"><b>Bước 4 · Bấm mua — nhận hàng tự động</b><small>Hàng có sẵn sẽ giao ngay. Hết hàng thì "Đã thanh toán - chờ giao", shop giao tay trong 5–30 phút, có báo lại khi xong.</small></div>
+    </div>
+    <div class="note">💬 Có thắc mắc trong lúc mua, bấm "Nhắn Zalo" ở bất kỳ đâu trên trang để được hỗ trợ ngay.</div>
+    <a class="btn pri block" style="margin-top:12px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo shop</a>`);
+}
+$('#btnGuide').onclick = showGuide;
+
+async function checkSession() {
+  const s = getSession();
+  if (!s) return;
+  try {
+    const r = await apiPost({ action: 'me', session: s.token });
+    s.customer = r.customer;
+    for (const st of webStores()) { try { if (st.getItem(LS_SESSION)) st.setItem(LS_SESSION, JSON.stringify(s)); } catch {} }
+    renderUser();
+  } catch (err) { if (isSessionError(err)) { clearSession(); renderUser(); } }
+}
+
+// ===== Sản phẩm =====
+const LS_PRODUCTS = 'tav_products';
+async function loadProducts() {
+  // Hiện ngay danh sách lần trước (giá/kho có thể cũ vài phút), rồi cập nhật
+  const cached = store.get(LS_PRODUCTS, null);
+  if (cached && cached.products) { DATA = cached; renderCats(); renderList(); }
+  try {
+    DATA = await apiGet({ action: 'products' }, 4);
+    store.set(LS_PRODUCTS, DATA);
+    renderCats(); renderList();
+  } catch (err) {
+    if (!cached) $('#list').innerHTML = `<div class="empty">Không tải được sản phẩm. <a href="#" onclick="location.reload();return false">Tải lại</a> hoặc <a href="${ZALO}" target="_blank" rel="noopener">nhắn Zalo shop</a></div>`;
+  }
+}
+function groups() { return [...new Set(DATA.products.map(p => p.group))]; }
+function renderCats() {
+  $('#cats').innerHTML = ['Tất cả', ...groups()].map(g => `<button class="cat ${g === CAT ? 'on' : ''}" data-cat="${esc(g)}">${esc(g)}</button>`).join('');
+  $('#cats').querySelectorAll('.cat').forEach(b => b.onclick = () => { CAT = b.dataset.cat; renderCats(); renderList(); });
+}
+// Nhiều dòng sản phẩm cùng comboKey gộp lại thành 1 thẻ, khách chọn gói bằng radio
+function groupItems(items) {
+  const seen = new Set(), out = [];
+  items.forEach(p => {
+    if (p.comboKey) {
+      if (seen.has(p.comboKey)) return;
+      seen.add(p.comboKey);
+      out.push({ combo: true, key: p.comboKey, name: p.name, tiers: items.filter(x => x.comboKey === p.comboKey) });
+    } else out.push(p);
+  });
+  return out;
+}
+function comboCard(c) {
+  const tiers = c.tiers;
+  return `<div class="card">
+    <h3>${esc(c.name)}</h3>
+    <div class="meta"><span class="tag">Chọn gói bên dưới</span></div>
+    <div class="tiers" data-combo="${esc(c.key)}">${tiers.map((t, i) => `<label class="tier ${i === 0 ? 'on' : ''}">
+      <input type="radio" name="combo-${esc(c.key)}" value="${esc(t.id)}" ${i === 0 ? 'checked' : ''}>
+      <span>${esc(t.duration)}</span><b>${t.price > 0 ? money(t.price) : 'Liên hệ'}</b>
+    </label>`).join('')}</div>
+    <button class="btn pri block" data-buy="${esc(tiers[0].id)}" data-combo-btn>Mua ngay</button>
+  </div>`;
+}
+function card(p) {
+  if (p.combo) return comboCard(p);
+  const stock = p.price > 0 ? (p.stock > 0 ? `<span class="tag g">Còn ${p.stock} · giao ngay</span>` : `<span class="tag y">Giao trong 5–30 phút</span>`) : '';
+  const act = p.price > 0
+    ? `<button class="btn pri block" data-buy="${esc(p.id)}">Mua ngay</button>`
+    : `<a class="btn block" href="${ZALO}" target="_blank" rel="noopener">Liên hệ Zalo</a>`;
+  return `<div class="card">
+    <h3>${esc(p.name)}</h3>
+    <div class="meta">${p.duration && p.duration !== '-' ? `<span class="tag">⏱ ${esc(p.duration)}</span>` : ''}${p.warranty ? `<span class="tag">🛡 ${esc(p.warranty)}</span>` : ''}${stock}</div>
+    <div class="price">${p.price > 0 ? money(p.price) : 'Liên hệ'}</div>
+    ${act}
+  </div>`;
+}
+function renderList() {
+  const gs = CAT === 'Tất cả' ? groups() : [CAT];
+  $('#list').innerHTML = gs.map(g => {
+    const items = groupItems(DATA.products.filter(p => p.group === g));
+    return items.length ? `<h2 class="group-title">${esc(g)}</h2><div class="grid">${items.map(card).join('')}</div>` : '';
+  }).join('') || '<div class="empty">Chưa có sản phẩm</div>';
+  $('#list').querySelectorAll('[data-combo] input[type=radio]').forEach(r => r.onchange = () => {
+    const wrap = r.closest('[data-combo]');
+    wrap.querySelectorAll('.tier').forEach(t => t.classList.remove('on'));
+    r.closest('.tier').classList.add('on');
+    const btn = wrap.parentElement.querySelector('[data-combo-btn]');
+    if (btn) btn.dataset.buy = r.value;
+  });
+  $('#list').querySelectorAll('[data-buy]').forEach(b => b.onclick = () => startBuy(b.dataset.buy));
+}
+
+// ===== Mua hàng (trừ thẳng vào ví) =====
+// "Khách cần gửi thêm" trong Sheet viết nhiều mục cách nhau bằng "|" (vd "Gmail nhận tài khoản|Số điện thoại")
+// sẽ tự tách thành nhiều ô nhập riêng, rồi ghép lại 1 dòng khi lưu để cột "Khách gửi thêm" vẫn đọc được trong Sheet.
+function startBuy(id) {
+  const p = DATA.products.find(x => x.id === id);
+  if (!user()) return showAuth('login', () => startBuy(id));
+  const u = user();
+  const enough = (u.balance || 0) >= p.price;
+  const needFields = (p.comboCount > 0 || !p.need) ? [] : p.need.split('|').map(s => s.trim()).filter(Boolean);
+  openModal(`
+    <h2>${esc(p.name)}</h2>
+    <p class="sub">${esc([p.duration !== '-' ? p.duration : '', p.warranty].filter(Boolean).join(' · '))}</p>
+    <div class="sum"><span>Giá</span><b>${money(p.price)}</b></div>
+    <div class="row"><span>Số dư ví hiện tại</span><b>${money(u.balance || 0)}</b></div>
+    <form id="fBuy">
+      ${p.comboCount > 0
+        ? `<label>${esc(p.need || 'Danh sách Gmail cần nâng cấp')} *</label><textarea name="extra" required maxlength="600" rows="${Math.max(2, p.comboCount)}" placeholder="Mỗi dòng 1 Gmail"></textarea><p class="sub" style="margin:6px 0 0">Nhập đúng <b>${p.comboCount}</b> Gmail, mỗi dòng 1 Gmail.</p>`
+        : needFields.length > 1
+          ? needFields.map((label, i) => `<label>${esc(label)} *</label><input name="extra${i}" required maxlength="150">`).join('')
+          : needFields.length === 1
+            ? `<label>${esc(needFields[0])} *</label><input name="extra" required maxlength="300">`
+            : `<label>Ghi chú cho shop (không bắt buộc)</label><input name="extra" maxlength="300">`}
+      <div class="err" id="bErr">${enough ? '' : 'Số dư không đủ, cần nạp thêm ' + money(p.price - (u.balance || 0)) + '.'}</div>
+      ${enough
+        ? `<button class="btn pri block" type="submit">Xác nhận mua — trừ ${money(p.price)} trong ví</button>`
+        : `<button class="btn pri block" type="button" id="btnGoTopup">Nạp thêm ${money(p.price - (u.balance || 0))} rồi mua</button>`}
+    </form>`);
+  if (!enough) { $('#btnGoTopup').onclick = () => showTopup(() => startBuy(id), p.price - (u.balance || 0)); return; }
+  $('#fBuy').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; btn.textContent = 'Đang xử lý…'; $('#bErr').textContent = '';
+    const fd = new FormData(e.target);
+    const extra = needFields.length > 1 ? needFields.map((_, i) => (fd.get('extra' + i) || '').trim()).join(' | ') : (fd.get('extra') || '');
+    if (p.comboCount > 0) {
+      const n = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
+      if (n !== p.comboCount) {
+        $('#bErr').textContent = 'Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.';
+        btn.disabled = false; btn.textContent = 'Xác nhận mua — trừ ' + money(p.price) + ' trong ví';
+        return;
+      }
+    }
+    try {
+      const o = await apiPost({ action: 'order', productId: id, session: getSession().token, extra });
+      updateBalance(o.balance);
+      const list = store.get(LS_ORDERS, []);
+      list.unshift({ code: o.code, token: o.token, product: o.product, amount: o.amount, at: Date.now() });
+      store.set(LS_ORDERS, list.slice(0, 30));
+      showPay(o);
+    } catch (err) {
+      if (isSessionError(err)) { clearSession(); renderUser(); return showAuth('login', () => startBuy(id)); }
+      if (/không đủ/.test(err.message)) { closeModal(); return showTopup(() => startBuy(id), p.price - (u.balance || 0)); }
+      $('#bErr').textContent = err.message; btn.disabled = false; btn.textContent = 'Xác nhận mua — trừ ' + money(p.price) + ' trong ví';
+    }
+  };
+}
+
+function qrUrl(o) {
+  const b = o.bank;
+  return `https://img.vietqr.io/image/${encodeURIComponent(b.bin)}-${encodeURIComponent(b.account)}-compact2.png?amount=${o.amount}&addInfo=${encodeURIComponent(o.code)}&accountName=${encodeURIComponent(b.name)}`;
+}
+
+function showPay(o) {
+  if (o.status === 'Đã giao') return showDone(o);
+  const paid = o.status === 'Đã thanh toán - chờ giao';
+  const short = o.status === 'Chuyển thiếu';
+  if (paid) return showPaidWaiting(o);
+  openModal(`
+    <h2>Quét mã để thanh toán</h2>
+    <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)}</p>
+    <div class="qr"><img src="${qrUrl(o)}" alt="Mã QR thanh toán"></div>
+    <div class="row"><span>Ngân hàng</span><b>MB Bank</b></div>
+    <div class="row"><span>Số tài khoản</span><b>${esc(o.bank.account)}<button class="copy" data-copy="${esc(o.bank.account)}">Chép</button></b></div>
+    <div class="row"><span>Chủ tài khoản</span><b>${esc(o.bank.name)}</b></div>
+    <div class="row"><span>Số tiền</span><b>${money(o.amount)}<button class="copy" data-copy="${o.amount}">Chép</button></b></div>
+    <div class="row"><span>Nội dung CK</span><b style="color:var(--brand2)">${esc(o.code)}<button class="copy" data-copy="${esc(o.code)}">Chép</button></b></div>
+    <div class="note">${short ? '⚠️ Shop đã nhận tiền nhưng <b>chưa đủ</b>. Vui lòng nhắn Zalo shop để được xử lý.' : 'Nhập <b>đúng nội dung ' + esc(o.code) + '</b> và <b>đúng số tiền</b> để hệ thống tự xác nhận. Quét QR thì đã điền sẵn.'}</div>
+    <div class="wait"><div class="spin"></div><span id="wTxt">Đang chờ tiền về… (bạn có thể đóng trang, mở lại ở "Đơn của tôi")</span></div>
+    <a class="btn block" style="margin-top:12px" href="${ZALO}" target="_blank" rel="noopener">Cần hỗ trợ? Nhắn Zalo</a>`);
+  startPoll(o);
+}
+
+function showPaidWaiting(o) {
+  openModal(`
+    <div class="done">
+      <div class="ic">✅</div>
+      <h2 style="padding:0">Thanh toán thành công!</h2>
+      <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)} · ${money(o.amount)}<br>Shop đã nhận được tiền, đang chuẩn bị hàng cho bạn — thường xong trong 5–30 phút.</p>
+      <div class="row"><span>Trạng thái</span><b style="color:var(--warn)">Đang chuẩn bị hàng</b></div>
+      <div class="note">⏰ Nếu <b>quá 30 phút</b> chưa nhận được hàng, vui lòng nhắn Zalo kèm mã đơn <b>${esc(o.code)}</b> để được hỗ trợ ngay.</div>
+      <button class="btn block" style="margin-top:12px" id="btnCheckStatus">🔄 Xem trạng thái đơn hàng</button>
+      <a class="btn block" style="margin-top:8px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo kèm mã ${esc(o.code)}</a>
+    </div>`);
+  $('#btnCheckStatus').onclick = async () => {
+    const b = $('#btnCheckStatus'); b.disabled = true; b.textContent = 'Đang kiểm tra…';
+    try {
+      const s = await apiGet({ action: 'status', code: o.code, token: o.token }, 2);
+      s.token = o.token;
+      showPay(s);
+      if (s.status === o.status) toast('Đơn vẫn đang chuẩn bị hàng');
+    } catch (err) { toast(err.message); b.disabled = false; b.textContent = '🔄 Xem trạng thái đơn hàng'; }
+  };
+  startPoll(o);
+}
+
+function showDone(o) {
+  clearInterval(pollTimer); pollTimer = null;
+  openModal(`
+    <div class="done">
+      <div class="ic">🎉</div>
+      <h2 style="padding:0">Giao hàng thành công</h2>
+      <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)}</p>
+    </div>
+    <div class="deliver">${esc(o.content)}</div>
+    <button class="btn pri block" data-copy="${esc(o.content)}">Sao chép thông tin</button>
+    <div class="note">Lưu lại thông tin này. Đơn luôn xem lại được ở "Đơn của tôi" trên máy này. Cần bảo hành, nhắn Zalo kèm mã đơn.</div>
+    <a class="btn block" style="margin-top:10px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo shop</a>`);
+}
+
+function startPoll(o) {
+  clearInterval(pollTimer);
+  let last = o.status, busy = false;
+  pollTimer = setInterval(async () => {
+    if (busy) return;
+    busy = true;
+    try {
+      const s = await apiGet({ action: 'status', code: o.code, token: o.token }, 1);
+      s.token = o.token;
+      if (s.status !== last) { last = s.status; showPay(s); }
+    } catch {} finally { busy = false; }
+  }, 5000);
+}
+
+// ===== Đơn của tôi =====
+$('#btnOrders').onclick = async () => {
+  let list = store.get(LS_ORDERS, []);
+  const s = getSession();
+  if (s) {
+    openModal('<h2>Đơn của tôi</h2><div class="wait"><div class="spin"></div><span>Đang tải đơn…</span></div>');
+    try { list = (await apiPost({ action: 'myorders', session: s.token })).orders; }
+    catch (err) { if (isSessionError(err)) { clearSession(); renderUser(); } }
+  }
+  if (!list.length) {
+    openModal(`<h2>Đơn của tôi</h2><p class="sub">${s ? 'Tài khoản này chưa có đơn nào.' : 'Máy này chưa có đơn nào. <a href="#" id="goLogin" style="color:var(--brand2)">Đăng nhập</a> để xem đơn trên mọi máy.'}</p>`);
+    const g = $('#goLogin');
+    if (g) g.onclick = e => { e.preventDefault(); showAuth('login', null); };
+    return;
+  }
+  openModal(`<h2>Đơn của tôi</h2><p class="sub">Bấm vào đơn để xem chi tiết.</p>
+    <div class="olist">${list.map((o, i) => `<button class="oitem" data-i="${i}"><b>${esc(o.code)}</b> · ${money(o.amount)}<small>${esc(o.product)}</small><span class="st" id="st${i}">…</span></button>`).join('')}</div>`);
+  document.querySelectorAll('.oitem').forEach(b => b.onclick = async () => {
+    const o = list[b.dataset.i];
+    try { const s = await apiGet({ action: 'status', code: o.code, token: o.token }); s.token = o.token; showPay(s); }
+    catch (err) { toast(err.message); }
+  });
+  list.forEach(async (o, i) => {
+    try {
+      const s = await apiGet({ action: 'status', code: o.code, token: o.token });
+      const el = document.getElementById('st' + i); if (!el) return;
+      el.textContent = s.status;
+      el.style.color = s.status === 'Đã giao' ? 'var(--ok)' : s.status === 'Chờ thanh toán' ? 'var(--muted)' : 'var(--warn)';
+    } catch {}
+  });
+};
+
+renderUser();
+loadProducts();
+checkSession();
+</script>
+</body>
+</html>
