@@ -36,6 +36,8 @@ main{padding:20px 0 60px}
 .filters{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px}
 .fchip{padding:7px 14px;border-radius:99px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
 .fchip.on{background:var(--card);border-color:var(--brand);color:var(--text)}
+.fchip.big{padding:13px 18px;font-size:15px;flex:1;text-align:center}
+#oSearch{margin-bottom:12px}
 label{display:block;font-size:13px;font-weight:600;margin:12px 0 6px}
 input,textarea,select{width:100%;padding:11px 13px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--text);font-family:inherit;font-size:15px}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brand)}
@@ -105,7 +107,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => Number(n).toLocaleString('vi-VN') + ' đ';
 
-let SESSION = null, TAB = 'orders', ORDER_FILTER = '';
+let SESSION = null, TAB = 'orders', ORDER_GROUP = 'pending', ORDER_SEARCH = '', ALL_ORDERS = [];
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2200); }
 
@@ -170,8 +172,6 @@ function showTab() {
 }
 
 // ===== Đơn hàng =====
-const STATUS_LIST = ['', 'Đã thanh toán - chờ giao', 'Chờ thanh toán', 'Chuyển thiếu', 'Đã giao'];
-const STATUS_LABEL = { '': 'Tất cả', 'Đã thanh toán - chờ giao': 'Cần giao', 'Chờ thanh toán': 'Chờ thanh toán', 'Chuyển thiếu': 'Chuyển thiếu', 'Đã giao': 'Đã giao' };
 function stBadgeClass(s) {
   if (s === 'Đã giao') return 'st-done';
   if (s === 'Đã thanh toán - chờ giao') return 'st-paid';
@@ -179,18 +179,36 @@ function stBadgeClass(s) {
   return 'st-pending';
 }
 async function loadOrders() {
-  $('#ordersTab').innerHTML = `
-    <div class="filters" id="ofilters">${STATUS_LIST.map(s => `<button class="fchip ${ORDER_FILTER === s ? 'on' : ''}" data-f="${esc(s)}">${STATUS_LABEL[s]}</button>`).join('')}</div>
-    <div id="olist" class="card"><div class="empty">Đang tải…</div></div>`;
-  $('#ofilters').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { ORDER_FILTER = b.dataset.f; loadOrders(); });
+  $('#ordersTab').innerHTML = `<div class="card"><div class="empty">Đang tải…</div></div>`;
   try {
-    const r = await apiPost({ action: 'adminOrders', status: ORDER_FILTER });
-    renderOrders(r.orders);
-  } catch (err) { $('#olist').innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
+    const r = await apiPost({ action: 'adminOrders', status: '' });
+    ALL_ORDERS = r.orders;
+    renderOrdersShell();
+  } catch (err) { $('#ordersTab').innerHTML = `<div class="card"><div class="empty">${esc(err.message)}</div></div>`; }
+}
+function renderOrdersShell() {
+  const pendingCount = ALL_ORDERS.filter(o => o.status !== 'Đã giao').length;
+  const doneCount = ALL_ORDERS.filter(o => o.status === 'Đã giao').length;
+  $('#ordersTab').innerHTML = `
+    <div class="filters" id="ogroups">
+      <button class="fchip big ${ORDER_GROUP === 'pending' ? 'on' : ''}" data-g="pending">🔴 Chưa xử lý (${pendingCount})</button>
+      <button class="fchip big ${ORDER_GROUP === 'done' ? 'on' : ''}" data-g="done">✅ Đã xử lý (${doneCount})</button>
+    </div>
+    <input id="oSearch" placeholder="🔍 Tìm theo mã đơn, vd: TAVK5TTYV" value="${esc(ORDER_SEARCH)}">
+    <div id="olist"></div>`;
+  $('#ogroups').querySelectorAll('[data-g]').forEach(b => b.onclick = () => { ORDER_GROUP = b.dataset.g; renderOrdersShell(); });
+  $('#oSearch').oninput = e => { ORDER_SEARCH = e.target.value; renderOrderList(); };
+  renderOrderList();
+}
+function renderOrderList() {
+  let list = ALL_ORDERS.filter(o => ORDER_GROUP === 'done' ? o.status === 'Đã giao' : o.status !== 'Đã giao');
+  const q = ORDER_SEARCH.trim().toUpperCase();
+  if (q) list = list.filter(o => (o.code || '').toUpperCase().includes(q));
+  renderOrders(list);
 }
 function renderOrders(orders) {
-  if (!orders.length) { $('#olist').outerHTML = '<div class="card"><div class="empty">Không có đơn nào.</div></div>'; return; }
-  $('#olist').outerHTML = orders.map(o => `
+  if (!orders.length) { $('#olist').innerHTML = '<div class="card"><div class="empty">Không có đơn nào.</div></div>'; return; }
+  $('#olist').innerHTML = orders.map(o => `
     <div class="oitem" data-code="${esc(o.code)}">
       <div class="top">
         <div><code>${esc(o.code)}</code> <span class="st-badge ${stBadgeClass(o.status)}">${esc(o.status)}</span></div>
