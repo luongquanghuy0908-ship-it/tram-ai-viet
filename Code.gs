@@ -148,6 +148,7 @@ function doPost(e) {
     if (body.action === 'adminUpdateOrder') return json(adminUpdateOrder(body));
     if (body.action === 'adminAdjustBalance') return json(adminAdjustBalance(body));
     if (body.action === 'adminListCustomers') return json(adminListCustomers(body));
+    if (body.action === 'adminExportCustomers') return json(adminExportCustomers(body));
     if (body.action === 'adminFindCustomer') return json(adminFindCustomer(body));
     if (body.action === 'adminBanCustomer') return json(adminBanCustomer(body));
     if (body.action === 'adminUnbanCustomer') return json(adminUnbanCustomer(body));
@@ -698,6 +699,34 @@ function adminListCustomers(b) {
     });
   }
   return { customers: list };
+}
+
+// Xuất danh sách khách ra 1 Google Sheet riêng (không kèm mật khẩu/salt) để xem/chia sẻ dễ hơn Sheet gốc.
+// Dùng lại đúng 1 file cho mỗi lần xuất (lưu ID trong Script Properties) — bấm nhiều lần không tạo file rác.
+function adminExportCustomers(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const props = PropertiesService.getScriptProperties();
+  let ss = null;
+  const savedId = props.getProperty('CUSTOMER_EXPORT_ID');
+  if (savedId) { try { ss = SpreadsheetApp.openById(savedId); } catch (e) { ss = null; } }
+  if (!ss) {
+    ss = SpreadsheetApp.create('Danh sách khách hàng - ' + SHOP.name);
+    props.setProperty('CUSTOMER_EXPORT_ID', ss.getId());
+  }
+  const sh = ss.getSheets()[0];
+  sh.clear();
+  const header = ['SĐT/Zalo', 'Họ tên', 'Gmail', 'Số dư ví (đ)', 'Số đơn đã đặt', 'Lần cuối vào', 'Trạng thái'];
+  sh.getRange('A:A').setNumberFormat('@');
+  const rows = sheetOf(SH.customers).getDataRange().getValues().slice(1)
+    .filter(r => r[0])
+    .map(r => [
+      textCell(normPhone(r[K.phone])), String(r[K.name]), String(r[K.email]), Number(r[K.balance]) || 0,
+      Number(r[K.orders]) || 0, fmtDate(r[K.last]) || '', String(r[K.role] || '').toLowerCase() === 'banned' ? 'Đã khoá' : 'Bình thường',
+    ]);
+  sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
+  if (rows.length) sh.getRange(2, 1, rows.length, header.length).setValues(rows);
+  sh.autoResizeColumns(1, header.length);
+  return { url: ss.getUrl() };
 }
 
 function adminBanCustomer(b) {

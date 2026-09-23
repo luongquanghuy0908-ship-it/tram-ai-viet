@@ -256,9 +256,19 @@ async function renderWalletTab() {
 }
 function renderCustomerList() {
   $('#walletTab').innerHTML = `
+    <button class="btn block" id="cExport" style="margin-bottom:10px">📤 Tải danh sách khách lên Google Sheet</button>
     <input id="cSearch" placeholder="🔍 Tìm theo tên hoặc số điện thoại" value="${esc(CUST_SEARCH)}">
     <div id="clist"></div>`;
   $('#cSearch').oninput = e => { CUST_SEARCH = e.target.value; renderCustomerItems(); };
+  $('#cExport').onclick = async () => {
+    const btn = $('#cExport'); btn.disabled = true; btn.textContent = 'Đang tạo…';
+    try {
+      const r = await apiPost({ action: 'adminExportCustomers' });
+      toast('Đã cập nhật Google Sheet');
+      window.open(r.url, '_blank');
+    } catch (err) { toast(err.message); }
+    btn.disabled = false; btn.textContent = '📤 Tải danh sách khách lên Google Sheet';
+  };
   renderCustomerItems();
 }
 function renderCustomerItems() {
