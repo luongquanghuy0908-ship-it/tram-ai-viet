@@ -140,11 +140,15 @@ function doPost(e) {
     if (body.action === 'forgotpassword') return json(forgotPassword(body));
     if (body.action === 'resetpassword') return json(resetPassword(body));
     if (body.action === 'adminOrders') return json(adminOrders(body));
+    if (body.action === 'adminPendingOrders') return json(adminPendingOrders(body));
     if (body.action === 'adminUpdateOrder') return json(adminUpdateOrder(body));
     if (body.action === 'adminAdjustBalance') return json(adminAdjustBalance(body));
+    if (body.action === 'adminListCustomers') return json(adminListCustomers(body));
+    if (body.action === 'adminFindCustomer') return json(adminFindCustomer(body));
+    if (body.action === 'adminBanCustomer') return json(adminBanCustomer(body));
+    if (body.action === 'adminUnbanCustomer') return json(adminUnbanCustomer(body));
     if (body.action === 'adminListStaff') return json(adminListStaff(body));
     if (body.action === 'adminSetStaff') return json(adminSetStaff(body));
-    if (body.action === 'adminFindCustomer') return json(adminFindCustomer(body));
     return json({ error: 'Yêu cầu không hợp lệ' });
   } catch (err) { return json({ error: String(err.message || err) }); }
 }
@@ -288,12 +292,11 @@ function register(b) {
   try {
     const f = findCustomer(c.phone);
     if (f.data && f.data[K.hash]) throw new Error('Số này đã có tài khoản. Hãy bấm "Đăng nhập".');
+    if (f.data) throw new Error('Số điện thoại này đã được đăng ký. Vui lòng đặt lại mật khẩu hoặc liên hệ shop.');
     const salt = newToken().slice(0, 16);
-    const row = [textCell(c.phone), c.name, c.email, f.data ? f.data[K.first] : now(), now(), f.data ? Number(f.data[K.orders]) || 0 : 0, hashPw(pw, salt), salt];
-    if (f.data) f.sh.getRange(f.row, 1, 1, row.length).setValues([row]);
-    else f.sh.appendRow(row);
-    const balance = f.data ? Number(f.data[K.balance]) || 0 : 0;
-    return { customer: { phone: normPhone(c.phone), name: c.name, email: c.email, balance }, session: createSession(c.phone, b.remember) };
+    const row = [textCell(c.phone), c.name, c.email, now(), now(), 0, hashPw(pw, salt), salt, 0, ''];
+    f.sh.appendRow(row);
+    return { customer: { phone: normPhone(c.phone), name: c.name, email: c.email, balance: 0 }, session: createSession(c.phone, b.remember) };
   } finally { lock.releaseLock(); }
 }
 
@@ -306,6 +309,7 @@ function login(b) {
   if (fails >= 5) throw new Error('Sai mật khẩu quá nhiều lần. Thử lại sau 15 phút hoặc nhắn Zalo shop.');
   const f = findCustomer(phone);
   if (!f.data || !f.data[K.hash]) throw new Error('Số này chưa có tài khoản. Hãy bấm "Tạo tài khoản".');
+  if (String(f.data[K.role] || '').toLowerCase() === 'banned') throw new Error('Tài khoản này đã bị khoá. Vui lòng nhắn Zalo shop để được hỗ trợ.');
   if (hashPw(String(b.password || ''), String(f.data[K.salt])) !== f.data[K.hash]) {
     cache.put(failKey, String(fails + 1), 900);
     throw new Error('Sai mật khẩu' + (fails + 1 >= 3 ? ' (còn ' + (4 - fails) + ' lần thử)' : ''));
@@ -616,6 +620,71 @@ function notifyOwner(msg) {
 
 // ===== Admin =====
 // role admin = toàn quyền (đơn hàng, ví, quản lý nhân viên). role staff = chỉ xử lý đơn hàng.
+function adminPendingOrders(b) {
+  requireRole(b.session, [ROLE.ADMIN, ROLE.STAFF]);
+  const rows = SpreadsheetApp.getActive().getSheetByName(SH.orders.name).getDataRange().getValues();
+  const list = [];
+  for (let i = rows.length - 1; i >= 1 && list.length < 300; i--) {
+    const r = rows[i];
+    if (!r[O.code] || r[O.status] === ST.DONE) continue;
+    list.push({
+      code: r[O.code], time: r[O.time], product: r[O.pname], amount: r[O.amount],
+      contact: r[O.contact], status: r[O.status], name: r[O.name], email: r[O.email],
+    });
+  }
+  return { orders: list };
+}
+
+function adminListCustomers(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const rows = sheetOf(SH.customers).getDataRange().getValues();
+  const list = [];
+  for (let i = 1; i < rows.length; i++) {
+    if (!rows[i][K.phone]) continue;
+    list.push({
+      phone: normPhone(rows[i][K.phone]),
+      name: String(rows[i][K.name]),
+      email: String(rows[i][K.email]),
+      balance: Number(rows[i][K.balance]) || 0,
+      orders: Number(rows[i][K.orders]) || 0,
+      lastSeen: String(rows[i][K.last] || ''),
+      role: String(rows[i][K.role] || ''),
+      isBanned: String(rows[i][K.role] || '').toLowerCase() === 'banned'
+    });
+  }
+  return { customers: list };
+}
+
+function adminBanCustomer(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
+  if (!phone) throw new Error('Thiếu số điện thoại');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const f = findCustomer(phone);
+    if (!f.data) throw new Error('Không tìm thấy khách hàng');
+    f.sh.getRange(f.row, K.role + 1).setValue('banned');
+    notifyOwner('🚫 Admin khoá tài khoản khách hàng: ' + phone + ' (' + f.data[K.name] + ')');
+    return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
+function adminUnbanCustomer(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
+  if (!phone) throw new Error('Thiếu số điện thoại');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const f = findCustomer(phone);
+    if (!f.data) throw new Error('Không tìm thấy khách hàng');
+    f.sh.getRange(f.row, K.role + 1).setValue('');
+    notifyOwner('✅ Admin mở khoá tài khoản khách hàng: ' + phone + ' (' + f.data[K.name] + ')');
+    return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
 function adminOrders(b) {
   requireRole(b.session, [ROLE.ADMIN, ROLE.STAFF]);
   const status = String(b.status || '').trim();
