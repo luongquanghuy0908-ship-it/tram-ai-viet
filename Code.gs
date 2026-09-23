@@ -8,7 +8,7 @@ const MIN_TOPUP = 10000;
 const MAX_TOPUP = 20000000;
 
 const SH = {
-  products: { name: 'SanPham', header: ['ID', 'Nhóm', 'Tên sản phẩm', 'Thời hạn', 'Giá (đ) — 0 = Liên hệ', 'Bảo hành', 'Khách cần gửi thêm', 'Hiện trên web (TRUE/FALSE)', 'Mã combo (nhiều dòng cùng mã này gộp thành 1 thẻ chọn gói, để trống nếu bán riêng)', 'Số Gmail cần nhập (chỉ cho sản phẩm combo)'] },
+  products: { name: 'SanPham', header: ['ID', 'Nhóm', 'Tên sản phẩm', 'Thời hạn', 'Giá (đ) — 0 = Liên hệ', 'Bảo hành', 'Khách cần gửi thêm', 'Hiện trên web (TRUE/FALSE)', 'Mã combo (nhiều dòng cùng mã này gộp thành 1 thẻ chọn gói, để trống nếu bán riêng)', 'Số Gmail cần nhập (chỉ cho sản phẩm combo)', 'Danh sách lựa chọn (cách nhau bởi dấu phẩy — để trống thì khách tự gõ tay)'] },
   stock: { name: 'Kho', header: ['ID sản phẩm', 'Nội dung giao cho khách (acc | mk | hướng dẫn)', 'Mã đơn đã giao', 'Ngày giao'] },
   orders: { name: 'DonHang', header: ['Mã đơn', 'Token', 'Thời gian đặt', 'ID sản phẩm', 'Tên sản phẩm', 'Số tiền', 'Zalo/SĐT khách', 'Khách gửi thêm', 'Trạng thái', 'Nội dung giao cho khách', 'Thời gian nhận tiền', 'Mã GD ngân hàng', 'Họ tên', 'Gmail'] },
   customers: { name: 'KhachHang', header: ['SĐT/Zalo', 'Họ tên', 'Gmail', 'Lần đầu vào', 'Lần cuối vào', 'Số đơn đã đặt', 'Mật khẩu (đã mã hoá, xoá ô này = cho khách đặt lại)', 'Salt', 'Số dư ví (đ)', 'Vai trò (admin/staff, để trống = khách thường)'] },
@@ -149,6 +149,8 @@ function doPost(e) {
     if (body.action === 'adminUnbanCustomer') return json(adminUnbanCustomer(body));
     if (body.action === 'adminListStaff') return json(adminListStaff(body));
     if (body.action === 'adminSetStaff') return json(adminSetStaff(body));
+    if (body.action === 'adminListProducts') return json(adminListProducts(body));
+    if (body.action === 'adminSaveProduct') return json(adminSaveProduct(body));
     return json({ error: 'Yêu cầu không hợp lệ' });
   } catch (err) { return json({ error: String(err.message || err) }); }
 }
@@ -161,7 +163,7 @@ function listProducts() {
   });
   const products = ss.getSheetByName(SH.products.name).getDataRange().getValues().slice(1)
     .filter(r => r[0] && r[7] !== false && String(r[7]).toUpperCase() !== 'FALSE')
-    .map(r => ({ id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0, warranty: r[5], need: r[6], stock: stockCount[r[0]] || 0, comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0 }));
+    .map(r => ({ id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0, warranty: r[5], need: r[6], stock: stockCount[r[0]] || 0, comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean) }));
   return { shop: SHOP, bank: BANK, products };
 }
 
@@ -169,7 +171,7 @@ function findProduct(id) {
   const rows = SpreadsheetApp.getActive().getSheetByName(SH.products.name).getDataRange().getValues().slice(1);
   const r = rows.find(x => String(x[0]) === String(id));
   if (!r || String(r[7]).toUpperCase() === 'FALSE') return null;
-  return { id: String(r[0]), name: r[2] + (r[3] && r[3] !== '-' ? ' — ' + r[3] : ''), price: Number(r[4]) || 0, need: r[6], comboCount: Number(r[9]) || 0 };
+  return { id: String(r[0]), name: r[2] + (r[3] && r[3] !== '-' ? ' — ' + r[3] : ''), price: Number(r[4]) || 0, need: r[6], comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean) };
 }
 
 function cleanCustomer(b) {
@@ -407,6 +409,7 @@ function createOrder(b) {
   const c = requireSession(b.session);
   const extra = String(b.extra || '').trim().slice(0, 600);
   if (p.need && !extra) throw new Error('Vui lòng nhập: ' + p.need);
+  if (p.comboCount === 0 && p.options.length && !p.options.includes(extra)) throw new Error('Vui lòng chọn 1 lựa chọn hợp lệ trong danh sách.');
   if (p.comboCount > 0) {
     const nLines = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
     if (nLines !== p.comboCount) throw new Error('Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.');
@@ -771,6 +774,47 @@ function adminSetStaff(b) {
     if (!f.data) throw new Error('Số này chưa có tài khoản. Nhờ người đó vào web tạo tài khoản trước, rồi cấp quyền sau.');
     f.sh.getRange(f.row, K.role + 1).setValue(role);
     return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
+// Trả về TOÀN BỘ sản phẩm kể cả đang ẩn — chỉ dùng cho admin sửa, khách hàng dùng listProducts() (đã lọc)
+function adminListProducts(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const rows = SpreadsheetApp.getActive().getSheetByName(SH.products.name).getDataRange().getValues().slice(1);
+  const products = rows.filter(r => r[0]).map(r => ({
+    id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0,
+    warranty: r[5], need: r[6], visible: String(r[7]).toUpperCase() !== 'FALSE',
+    comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, optionsText: String(r[10] || ''),
+  }));
+  return { products };
+}
+
+// Thêm mới (id chưa có dòng nào) hoặc sửa (id đã có) — không xoá thật, chỉ ẩn bằng cột "Hiện trên web"
+// vì đơn hàng cũ (DonHang/Kho) còn tham chiếu tới ID sản phẩm.
+function adminSaveProduct(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const id = String(b.id || '').trim();
+  if (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(id)) throw new Error('ID sản phẩm chỉ gồm chữ thường/số/gạch ngang, 2-41 ký tự (vd: proxy-1t)');
+  const name = String(b.name || '').trim().slice(0, 200);
+  if (!name) throw new Error('Vui lòng nhập tên sản phẩm');
+  const price = Math.round(Number(b.price));
+  if (!(price >= 0)) throw new Error('Giá không hợp lệ');
+  const row = [
+    id, String(b.group || '').trim().slice(0, 60), name, String(b.duration || '-').trim().slice(0, 30), price,
+    String(b.warranty || '').trim().slice(0, 100), String(b.need || '').trim().slice(0, 150),
+    b.visible ? true : false, String(b.comboKey || '').trim().slice(0, 40), Math.max(0, Math.round(Number(b.comboCount)) || 0),
+    String(b.optionsText || '').trim().slice(0, 600),
+  ];
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = SpreadsheetApp.getActive().getSheetByName(SH.products.name);
+    const data = sh.getDataRange().getValues();
+    let foundRow = 0;
+    for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === id) { foundRow = i + 1; break; } }
+    if (foundRow) sh.getRange(foundRow, 1, 1, row.length).setValues([row]);
+    else sh.appendRow(row);
+    return { ok: true, created: !foundRow };
   } finally { lock.releaseLock(); }
 }
 

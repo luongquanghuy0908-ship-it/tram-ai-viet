@@ -240,12 +240,17 @@ function renderUser() {
   const s = getSession();
   $('#userChip').textContent = u ? '👤 ' + u.name + ' · ' + money(u.balance || 0) : '';
   $('#btnLogin').textContent = u ? 'Tài khoản' : 'Đăng nhập';
-  if (s && (s.customer.role === 'admin' || s.customer.role === 'staff')) {
-    const adminBtn = document.createElement('button');
+  const isStaff = s && (s.customer.role === 'admin' || s.customer.role === 'staff');
+  let adminBtn = $('#btnAdmin');
+  if (isStaff && !adminBtn) {
+    adminBtn = document.createElement('a');
+    adminBtn.id = 'btnAdmin';
     adminBtn.className = 'btn';
     adminBtn.textContent = '⚙️ Admin';
-    adminBtn.onclick = showAdminDashboard;
+    adminBtn.href = 'admin.html';
     $('#btnOrders').parentElement.insertBefore(adminBtn, $('#btnOrders'));
+  } else if (!isStaff && adminBtn) {
+    adminBtn.remove();
   }
 }
 
@@ -435,195 +440,6 @@ function showAccount() {
 }
 $('#btnLogin').onclick = () => user() ? showAccount() : showAuth('login', null);
 
-function showAdminDashboard() {
-  const s = getSession();
-  if (!s || (s.customer.role !== 'admin' && s.customer.role !== 'staff')) return showAuth('login', null);
-  openModal(`
-    <h2>⚙️ Admin Dashboard</h2>
-    <div class="tabs"><button type="button" class="tab on" data-tab="pending">Đơn chờ xử lí</button><button type="button" class="tab" data-tab="customers">Quản lí khách</button><button type="button" class="tab" data-tab="staff">${s.customer.role === 'admin' ? 'Quản lí nhân viên' : 'Tài khoản'}</button></div>
-    <div id="adminPending" class="olist"></div>
-    <div id="adminCustomers" style="display:none" class="olist"></div>
-    <div id="adminStaff" style="display:none" class="olist"></div>`);
-
-  $('#modal').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
-    $('#modal').querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
-    b.classList.add('on');
-    $('#adminPending').style.display = b.dataset.tab === 'pending' ? 'flex' : 'none';
-    $('#adminCustomers').style.display = b.dataset.tab === 'customers' ? 'flex' : 'none';
-    $('#adminStaff').style.display = b.dataset.tab === 'staff' ? 'flex' : 'none';
-    if (b.dataset.tab === 'pending' && $('#adminPending').innerHTML === '') loadAdminPending();
-    if (b.dataset.tab === 'customers' && $('#adminCustomers').innerHTML === '') loadAdminCustomers();
-    if (b.dataset.tab === 'staff' && $('#adminStaff').innerHTML === '') loadAdminStaff();
-  });
-
-  loadAdminPending();
-}
-
-function loadAdminPending() {
-  const s = getSession();
-  $('#adminPending').innerHTML = '<div class="wait"><div class="spin"></div><span>Đang tải đơn chờ xử lí...</span></div>';
-  apiPost({ action: 'adminPendingOrders', session: s.token }).then(r => {
-    if (!r.orders || !r.orders.length) {
-      $('#adminPending').innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px">Không có đơn nào chờ xử lí</p>';
-      return;
-    }
-    $('#adminPending').innerHTML = r.orders.map(o => `
-      <div class="oitem" style="cursor:pointer" onclick="showAdminOrderDetail('${esc(o.code)}')">
-        <b>${esc(o.code)}</b> · ${money(o.amount)}<br><small>${esc(o.name)} — ${esc(o.contact)}</small><br><small style="color:var(--${o.status === 'Chờ thanh toán' ? 'muted' : 'warn'})">⏰ ${esc(o.status)}</small>
-      </div>`).join('');
-  }).catch(err => {
-    $('#adminPending').innerHTML = '<p style="color:var(--bad);padding:20px">' + err.message + '</p>';
-  });
-}
-
-function loadAdminCustomers() {
-  const s = getSession();
-  $('#adminCustomers').innerHTML = '<div class="wait"><div class="spin"></div><span>Đang tải danh sách khách...</span></div>';
-  apiPost({ action: 'adminListCustomers', session: s.token }).then(r => {
-    if (!r.customers || !r.customers.length) {
-      $('#adminCustomers').innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px">Không có khách hàng nào</p>';
-      return;
-    }
-    $('#adminCustomers').innerHTML = r.customers.map(c => `
-      <div class="oitem">
-        <b>${esc(c.phone)}</b> — ${esc(c.name)}<br><small>Số dư: ${money(c.balance)} · Đơn: ${c.orders}</small><br>
-        <small style="color:var(--${c.isBanned ? 'bad' : 'muted'});">${c.isBanned ? '🚫 Bị khoá' : '✓ Bình thường'}</small><br>
-        <button class="btn" style="margin-top:8px;padding:6px 10px;font-size:12px" onclick="showAdminCustomerAction('${esc(c.phone)}',${c.isBanned})">Chi tiết & Hành động</button>
-      </div>`).join('');
-  }).catch(err => {
-    $('#adminCustomers').innerHTML = '<p style="color:var(--bad);padding:20px">' + err.message + '</p>';
-  });
-}
-
-function loadAdminStaff() {
-  const s = getSession();
-  $('#adminStaff').innerHTML = '<div class="wait"><div class="spin"></div><span>Đang tải thông tin...</span></div>';
-  apiPost({ action: 'adminListStaff', session: s.token }).then(r => {
-    if (s.customer.role !== 'admin') {
-      $('#adminStaff').innerHTML = `<div class="oitem" style="text-align:center"><b>${esc(s.customer.name)}</b><br>${esc(s.customer.email)}<br><small>Admin</small></div>`;
-      return;
-    }
-    const html = (r.staff || []).map(st => `
-      <div class="oitem">
-        <b>${esc(st.phone)}</b> — ${esc(st.name)}<br><small>${st.role === 'admin' ? '👑 Admin' : '👤 Staff'}</small><br>
-        <button class="btn" style="margin-top:8px;padding:6px 10px;font-size:12px" onclick="showAdminSetStaff('${esc(st.phone)}','${st.role}')">Thay đổi quyền</button>
-      </div>`).join('') + `
-      <div class="oitem" style="background:var(--card);border:1px dashed var(--line)">
-        <b>➕ Thêm nhân viên</b><br><input type="tel" id="newStaffPhone" placeholder="Số điện thoại" style="margin-top:6px"><br>
-        <select id="newStaffRole" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)">
-          <option value="staff">Staff (Xử lý đơn)</option>
-          <option value="admin">Admin (Toàn quyền)</option>
-        </select><br>
-        <button class="btn pri block" style="margin-top:8px" onclick="doAddStaff()">Thêm</button>
-      </div>`;
-    $('#adminStaff').innerHTML = html;
-  }).catch(err => {
-    $('#adminStaff').innerHTML = '<p style="color:var(--bad);padding:20px">' + err.message + '</p>';
-  });
-}
-
-function showAdminOrderDetail(code) {
-  const s = getSession();
-  apiGet({ action: 'status', code, token: 'admin' }, 1).then(o => {
-    openModal(`
-      <h2>Đơn ${esc(o.code)}</h2>
-      <div class="row"><span>Trạng thái</span><b>${esc(o.status)}</b></div>
-      <div class="row"><span>Sản phẩm</span><b>${esc(o.product)}</b></div>
-      <div class="row"><span>Số tiền</span><b>${money(o.amount)}</b></div>
-      ${o.status === 'Đã giao' ? `<div class="deliver">${esc(o.content)}</div>` : `
-      <label>Nội dung giao cho khách</label>
-      <textarea id="orderContent" maxlength="4000" placeholder="Tài khoản | Mật khẩu | Hướng dẫn">${esc(o.content || '')}</textarea>
-      <button class="btn pri block" style="margin-top:12px" onclick="doUpdateOrder('${esc(code)}')">Cập nhật & Đánh dấu đã giao</button>`}
-      <button class="btn block" style="margin-top:8px" onclick="closeModal()">Đóng</button>`);
-  }).catch(err => toast(err.message));
-}
-
-function doUpdateOrder(code) {
-  const s = getSession();
-  const content = $('#orderContent').value;
-  apiPost({ action: 'adminUpdateOrder', session: s.token, code, content, markDone: true }).then(() => {
-    toast('Đơn đã cập nhật');
-    closeModal();
-    loadAdminPending();
-  }).catch(err => toast(err.message));
-}
-
-function showAdminCustomerAction(phone, isBanned) {
-  openModal(`
-    <h2>Quản lí khách ${esc(phone)}</h2>
-    <button class="btn ${isBanned ? '' : 'pri'} block" onclick="doToggleBan('${esc(phone)}',${!isBanned})">${isBanned ? '✅ Mở khoá' : '🚫 Khoá tài khoản'}</button>
-    <button class="btn block" style="margin-top:8px" onclick="showAdminAdjustBalance('${esc(phone)}')">Cộng/Trừ tiền ví</button>
-    <button class="btn block" style="margin-top:8px" onclick="closeModal()">Đóng</button>`);
-}
-
-function doToggleBan(phone, toBan) {
-  const s = getSession();
-  const action = toBan ? 'adminBanCustomer' : 'adminUnbanCustomer';
-  apiPost({ action, session: s.token, phone }).then(() => {
-    toast(toBan ? 'Đã khoá tài khoản' : 'Đã mở khoá tài khoản');
-    closeModal();
-    loadAdminCustomers();
-  }).catch(err => toast(err.message));
-}
-
-function showAdminAdjustBalance(phone) {
-  openModal(`
-    <h2>Điều chỉnh ví ${esc(phone)}</h2>
-    <label>Số tiền (dương = cộng, âm = trừ)</label>
-    <input type="number" id="adjustAmount" placeholder="Ví dụ: 50000 hoặc -10000"><br>
-    <label>Lý do (không bắt buộc)</label>
-    <input type="text" id="adjustReason" placeholder="Ví dụ: Lỗi hệ thống"><br>
-    <button class="btn pri block" style="margin-top:12px" onclick="doAdjustBalance('${esc(phone)}')">Xác nhận</button>
-    <button class="btn block" style="margin-top:8px" onclick="closeModal()">Huỷ</button>`);
-}
-
-function doAdjustBalance(phone) {
-  const s = getSession();
-  const delta = Number($('#adjustAmount').value);
-  const reason = $('#adjustReason').value;
-  if (!delta) return toast('Nhập số tiền');
-  apiPost({ action: 'adminAdjustBalance', session: s.token, phone, delta, reason }).then(() => {
-    toast('Đã điều chỉnh ví');
-    closeModal();
-    loadAdminCustomers();
-  }).catch(err => toast(err.message));
-}
-
-function showAdminSetStaff(phone, currentRole) {
-  openModal(`
-    <h2>Thay đổi quyền ${esc(phone)}</h2>
-    <label>Vai trò</label>
-    <select id="setStaffRole" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)">
-      <option value="staff" ${currentRole === 'staff' ? 'selected' : ''}>Staff (Xử lý đơn)</option>
-      <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>Admin (Toàn quyền)</option>
-      <option value="">Bỏ quyền (thành khách thường)</option>
-    </select><br>
-    <button class="btn pri block" style="margin-top:12px" onclick="doSetStaff('${esc(phone)}')">Cập nhật</button>
-    <button class="btn block" style="margin-top:8px" onclick="closeModal()">Huỷ</button>`);
-}
-
-function doSetStaff(phone) {
-  const s = getSession();
-  const role = $('#setStaffRole').value;
-  apiPost({ action: 'adminSetStaff', session: s.token, phone, role }).then(() => {
-    toast('Đã cập nhật quyền');
-    closeModal();
-    loadAdminStaff();
-  }).catch(err => toast(err.message));
-}
-
-function doAddStaff() {
-  const s = getSession();
-  const phone = $('#newStaffPhone').value.replace(/[^0-9+]/g, '');
-  const role = $('#newStaffRole').value;
-  if (!phone) return toast('Nhập số điện thoại');
-  if (!role) return toast('Chọn vai trò');
-  apiPost({ action: 'adminSetStaff', session: s.token, phone, role }).then(() => {
-    toast('Đã thêm nhân viên');
-    loadAdminStaff();
-  }).catch(err => toast(err.message));
-}
-
 function showGuide() {
   openModal(`
     <h2>Hướng dẫn mua hàng</h2>
@@ -742,7 +558,9 @@ function startBuy(id) {
         : needFields.length > 1
           ? needFields.map((label, i) => `<label>${esc(label)} *</label><input name="extra${i}" required maxlength="150">`).join('')
           : needFields.length === 1
-            ? `<label>${esc(needFields[0])} *</label><input name="extra" required maxlength="300">`
+            ? (p.options && p.options.length
+                ? `<label>${esc(needFields[0])} *</label><select name="extra" required><option value="" disabled selected>-- Chọn --</option>${p.options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>`
+                : `<label>${esc(needFields[0])} *</label><input name="extra" required maxlength="300">`)
             : `<label>Ghi chú cho shop (không bắt buộc)</label><input name="extra" maxlength="300">`}
       <div class="err" id="bErr">${enough ? '' : 'Số dư không đủ, cần nạp thêm ' + money(p.price - (u.balance || 0)) + '.'}</div>
       ${enough
@@ -810,6 +628,7 @@ function showPaidWaiting(o) {
       <h2 style="padding:0">Thanh toán thành công!</h2>
       <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)} · ${money(o.amount)}<br>Shop đã nhận được tiền, đang chuẩn bị hàng cho bạn — thường xong trong 5–30 phút.</p>
       <div class="row"><span>Trạng thái</span><b style="color:var(--warn)">Đang chuẩn bị hàng</b></div>
+      <div class="note">📩 Sản phẩm sẽ được gửi qua Gmail <b>${esc((user() || {}).email || '')}</b> (Gmail bạn đã nhập lúc mua hàng).</div>
       <div class="note">⏰ Nếu <b>quá 30 phút</b> chưa nhận được hàng, vui lòng nhắn Zalo kèm mã đơn <b>${esc(o.code)}</b> để được hỗ trợ ngay.</div>
       <button class="btn block" style="margin-top:12px" id="btnCheckStatus">🔄 Xem trạng thái đơn hàng</button>
       <a class="btn block" style="margin-top:8px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo kèm mã ${esc(o.code)}</a>

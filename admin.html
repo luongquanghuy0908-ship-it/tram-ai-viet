@@ -92,6 +92,7 @@ h1{font-size:20px;margin-bottom:4px}
     <div id="ordersTab"></div>
     <div id="walletTab" style="display:none"></div>
     <div id="staffTab" style="display:none"></div>
+    <div id="productsTab" style="display:none"></div>
   </div>
 </main>
 
@@ -152,7 +153,7 @@ function renderNav() {
 
 function renderTabs() {
   const isAdmin = SESSION.customer.role === 'admin';
-  const tabs = [['orders', 'Đơn hàng'], ...(isAdmin ? [['wallet', 'Ví khách'], ['staff', 'Nhân viên']] : [])];
+  const tabs = [['orders', 'Đơn hàng'], ...(isAdmin ? [['products', 'Sản phẩm'], ['wallet', 'Ví khách'], ['staff', 'Nhân viên']] : [])];
   $('#tabs2').innerHTML = tabs.map(([k, label]) => `<button class="tab2 ${TAB === k ? 'on' : ''}" data-tab="${k}">${label}</button>`).join('');
   $('#tabs2').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; renderTabs(); showTab(); });
 }
@@ -161,9 +162,11 @@ function showTab() {
   $('#ordersTab').style.display = TAB === 'orders' ? 'block' : 'none';
   $('#walletTab').style.display = TAB === 'wallet' ? 'block' : 'none';
   $('#staffTab').style.display = TAB === 'staff' ? 'block' : 'none';
+  $('#productsTab').style.display = TAB === 'products' ? 'block' : 'none';
   if (TAB === 'orders') loadOrders();
   if (TAB === 'wallet') renderWalletTab();
   if (TAB === 'staff') loadStaff();
+  if (TAB === 'products') loadProducts();
 }
 
 // ===== Đơn hàng =====
@@ -298,6 +301,75 @@ function renderStaff(staff) {
     try { await apiPost({ action: 'adminSetStaff', phone: b.dataset.remove, role: '' }); toast('Đã gỡ quyền'); loadStaff(); }
     catch (err) { toast(err.message); }
   });
+}
+
+// ===== Sản phẩm (admin) =====
+let PRODUCTS = [];
+async function loadProducts() {
+  $('#productsTab').innerHTML = `<div class="card"><div class="empty">Đang tải…</div></div>`;
+  try {
+    const r = await apiPost({ action: 'adminListProducts' });
+    PRODUCTS = r.products;
+    renderProducts();
+  } catch (err) { $('#productsTab').innerHTML = `<div class="card"><div class="empty">${esc(err.message)}</div></div>`; }
+}
+function renderProducts() {
+  $('#productsTab').innerHTML = `
+    <button class="btn pri block" id="pAdd" style="margin-bottom:14px">+ Thêm sản phẩm mới</button>
+    ${PRODUCTS.map(p => `
+      <div class="oitem">
+        <div class="top">
+          <div><b>${esc(p.name)}</b> ${p.visible ? '' : '<span class="st-badge st-short">Đang ẩn</span>'}</div>
+          <b>${money(p.price)}</b>
+        </div>
+        <div class="meta">ID: <code>${esc(p.id)}</code> · ${esc(p.group)} · ${esc(p.duration)}</div>
+        <div class="row2"><button class="btn sm" data-edit="${esc(p.id)}" style="flex:1">Sửa</button></div>
+      </div>`).join('') || '<div class="card"><div class="empty">Chưa có sản phẩm nào.</div></div>'}`;
+  $('#pAdd').onclick = () => showProductForm(null);
+  $('#productsTab').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => showProductForm(PRODUCTS.find(p => p.id === b.dataset.edit)));
+}
+function showProductForm(p) {
+  const isNew = !p;
+  p = p || { id: '', group: '', name: '', duration: '-', price: 0, warranty: '', need: '', visible: true, comboKey: '', comboCount: 0, optionsText: '' };
+  $('#productsTab').innerHTML = `
+    <div class="card">
+      <h1 style="margin-bottom:14px">${isNew ? 'Thêm sản phẩm mới' : 'Sửa sản phẩm'}</h1>
+      <form id="fProduct">
+        <label>ID (chữ thường/số/gạch ngang, không đổi được sau khi tạo)</label>
+        <input name="id" required pattern="[a-z0-9][a-z0-9-]{1,40}" value="${esc(p.id)}" placeholder="vd: proxy-1t" ${isNew ? '' : 'readonly style="opacity:.6"'}>
+        <label>Tên sản phẩm</label><input name="name" required value="${esc(p.name)}">
+        <label>Nhóm</label><input name="group" value="${esc(p.group)}" placeholder="vd: Tiện ích">
+        <label>Thời hạn</label><input name="duration" value="${esc(p.duration)}" placeholder="vd: 1 tháng, hoặc -">
+        <label>Giá (đ) — 0 = Liên hệ</label><input name="price" required inputmode="numeric" value="${p.price}">
+        <label>Bảo hành</label><input name="warranty" value="${esc(p.warranty)}">
+        <label>Khách cần gửi thêm (để trống nếu không cần)</label><input name="need" value="${esc(p.need)}" placeholder="vd: Gmail nhận tài khoản">
+        <label>Danh sách lựa chọn cho khách bấm (cách nhau dấu phẩy, để trống = khách gõ tay)</label>
+        <input name="optionsText" value="${esc(p.optionsText)}" placeholder="vd: Mỹ, Anh, Nhật Bản">
+        <label>Mã combo (để trống nếu bán riêng)</label><input name="comboKey" value="${esc(p.comboKey)}">
+        <label>Số Gmail cần nhập (chỉ cho sản phẩm combo)</label><input name="comboCount" inputmode="numeric" value="${p.comboCount}">
+        <label style="display:flex;align-items:center;gap:8px;margin-top:14px"><input type="checkbox" name="visible" style="width:auto" ${p.visible ? 'checked' : ''}> Hiện trên web cho khách mua</label>
+        <div class="err" id="pErr"></div>
+        <div class="row2" style="margin-top:14px">
+          <button class="btn" type="button" id="pCancel">Huỷ</button>
+          <button class="btn pri" type="submit">Lưu</button>
+        </div>
+      </form>
+    </div>`;
+  $('#pCancel').onclick = () => renderProducts();
+  $('#fProduct').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; $('#pErr').textContent = '';
+    const fd = new FormData(e.target);
+    try {
+      await apiPost({
+        action: 'adminSaveProduct', id: fd.get('id'), name: fd.get('name'), group: fd.get('group'),
+        duration: fd.get('duration'), price: Number(fd.get('price')), warranty: fd.get('warranty'),
+        need: fd.get('need'), optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
+        comboCount: Number(fd.get('comboCount')), visible: fd.get('visible') === 'on',
+      });
+      toast('Đã lưu sản phẩm'); loadProducts();
+    } catch (err) { $('#pErr').textContent = err.message; btn.disabled = false; }
+  };
 }
 
 function enterDash() {
