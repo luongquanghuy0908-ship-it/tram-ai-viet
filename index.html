@@ -556,7 +556,9 @@ function startBuy(id) {
       ${p.comboCount > 0
         ? `<label>${esc(p.need || 'Danh sách Gmail cần nâng cấp')} *</label><textarea name="extra" required maxlength="600" rows="${Math.max(2, p.comboCount)}" placeholder="Mỗi dòng 1 Gmail"></textarea><p class="sub" style="margin:6px 0 0">Nhập đúng <b>${p.comboCount}</b> Gmail, mỗi dòng 1 Gmail.</p>`
         : needFields.length > 1
-          ? needFields.map((label, i) => `<label>${esc(label)} *</label><input name="extra${i}" required maxlength="150">`).join('')
+          ? needFields.map((label, i) => (i === 0 && p.options && p.options.length)
+              ? `<label>${esc(label)} *</label><select name="extra0" required><option value="" disabled selected>-- Chọn --</option>${p.options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>`
+              : `<label>${esc(label)} *</label><input name="extra${i}" required maxlength="150">`).join('')
           : needFields.length === 1
             ? (p.options && p.options.length
                 ? `<label>${esc(needFields[0])} *</label><select name="extra" required><option value="" disabled selected>-- Chọn --</option>${p.options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>`

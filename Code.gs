@@ -409,7 +409,9 @@ function createOrder(b) {
   const c = requireSession(b.session);
   const extra = String(b.extra || '').trim().slice(0, 600);
   if (p.need && !extra) throw new Error('Vui lòng nhập: ' + p.need);
-  if (p.comboCount === 0 && p.options.length && !p.options.includes(extra)) throw new Error('Vui lòng chọn 1 lựa chọn hợp lệ trong danh sách.');
+  // options áp dụng cho trường đầu tiên — chỉ ép so khớp chặt khi sản phẩm chỉ có đúng 1 trường (extra = cả chuỗi)
+  const needFieldCount = p.need ? p.need.split('|').filter(s => s.trim()).length : 0;
+  if (p.comboCount === 0 && needFieldCount === 1 && p.options.length && !p.options.includes(extra)) throw new Error('Vui lòng chọn 1 lựa chọn hợp lệ trong danh sách.');
   if (p.comboCount > 0) {
     const nLines = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
     if (nLines !== p.comboCount) throw new Error('Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.');
