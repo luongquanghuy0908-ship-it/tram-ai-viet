@@ -340,7 +340,7 @@ function showProductForm(p) {
         <label>Tên sản phẩm</label><input name="name" required value="${esc(p.name)}">
         <label>Nhóm</label><input name="group" value="${esc(p.group)}" placeholder="vd: Tiện ích">
         <label>Thời hạn</label><input name="duration" value="${esc(p.duration)}" placeholder="vd: 1 tháng, hoặc -">
-        <label>Giá (đ) — 0 = Liên hệ</label><input name="price" required inputmode="numeric" value="${p.price}">
+        <label>Giá (đ) — 0 = Liên hệ, có thể gõ tắt vd 149k hoặc 1.5tr</label><input name="price" required value="${p.price}">
         <label>Số lượng còn (sản phẩm có giá thì để 10, sản phẩm Liên hệ để 1 — bán hết sẽ tự báo Hết hàng)</label>
         <input name="qty" required inputmode="numeric" value="${p.qty === null || p.qty === undefined ? 10 : p.qty}">
         <label>Bảo hành</label><input name="warranty" value="${esc(p.warranty)}">
@@ -355,6 +355,7 @@ function showProductForm(p) {
           <button class="btn" type="button" id="pCancel">Huỷ</button>
           <button class="btn pri" type="submit">Lưu</button>
         </div>
+        ${isNew ? '' : '<button class="btn bad block" type="button" id="pDelete" style="margin-top:8px">🗑 Xoá sản phẩm này</button>'}
       </form>
     </div>`;
   $('#pCancel').onclick = () => renderProducts();
@@ -365,12 +366,19 @@ function showProductForm(p) {
     try {
       await apiPost({
         action: 'adminSaveProduct', id: fd.get('id'), name: fd.get('name'), group: fd.get('group'),
-        duration: fd.get('duration'), price: Number(fd.get('price')), qty: Number(fd.get('qty')), warranty: fd.get('warranty'),
+        duration: fd.get('duration'), price: fd.get('price'), qty: Number(fd.get('qty')), warranty: fd.get('warranty'),
         need: fd.get('need'), optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
         comboCount: Number(fd.get('comboCount')), visible: fd.get('visible') === 'on',
       });
       toast('Đã lưu sản phẩm'); loadProducts();
     } catch (err) { $('#pErr').textContent = err.message; btn.disabled = false; }
+  };
+  const delBtn = $('#pDelete');
+  if (delBtn) delBtn.onclick = async () => {
+    if (!confirm('Xoá hẳn sản phẩm "' + p.name + '"? Đơn hàng cũ của sản phẩm này vẫn giữ nguyên, chỉ sản phẩm không còn bán được nữa. Không hoàn tác được.')) return;
+    delBtn.disabled = true;
+    try { await apiPost({ action: 'adminDeleteProduct', id: p.id }); toast('Đã xoá sản phẩm'); loadProducts(); }
+    catch (err) { $('#pErr').textContent = err.message; delBtn.disabled = false; }
   };
 }
 

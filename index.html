@@ -509,7 +509,7 @@ function comboCard(c) {
     <div class="meta"><span class="tag">Chọn gói bên dưới</span></div>
     <div class="tiers" data-combo="${esc(c.key)}">${tiers.map((t, i) => `<label class="tier ${i === def ? 'on' : ''} ${soldOut(t) ? 'off' : ''}">
       <input type="radio" name="combo-${esc(c.key)}" value="${esc(t.id)}" ${i === def ? 'checked' : ''} ${soldOut(t) ? 'disabled' : ''}>
-      <span>${esc(t.duration)}${soldOut(t) ? ' · Hết hàng' : ''}</span><b>${t.price > 0 ? money(t.price) : 'Liên hệ'}</b>
+      <span>${esc(t.duration)}${soldOut(t) ? ' · Hết hàng' : (t.qty !== null && t.qty !== undefined ? ' · còn ' + t.qty : '')}</span><b>${t.price > 0 ? money(t.price) : 'Liên hệ'}</b>
     </label>`).join('')}</div>
     ${allOut ? '<button class="btn block" disabled>Hết hàng</button>' : `<button class="btn pri block" data-buy="${esc(tiers[def].id)}" data-combo-btn>Mua ngay</button>`}
   </div>`;
@@ -518,13 +518,15 @@ function soldOut(p) { return p.qty !== null && p.qty !== undefined && p.qty <= 0
 function card(p) {
   if (p.combo) return comboCard(p);
   const out = p.price > 0 && soldOut(p);
-  const stock = p.price > 0 ? (out ? `<span class="tag r">Hết hàng</span>` : p.stock > 0 ? `<span class="tag g">Còn ${p.stock} · giao ngay</span>` : `<span class="tag y">Giao trong 5–30 phút</span>`) : '';
+  const hasQty = p.qty !== null && p.qty !== undefined;
+  const qtyTag = p.price > 0 && !out && hasQty ? `<span class="tag ${p.qty <= 3 ? 'y' : 'g'}">Còn ${p.qty} sản phẩm</span>` : '';
+  const stock = p.price > 0 ? (out ? `<span class="tag r">Hết hàng</span>` : p.stock > 0 ? `<span class="tag g">Giao ngay</span>` : `<span class="tag y">Giao trong 5–30 phút</span>`) : '';
   const act = p.price > 0
     ? (out ? `<button class="btn block" disabled>Hết hàng</button>` : `<button class="btn pri block" data-buy="${esc(p.id)}">Mua ngay</button>`)
     : `<a class="btn block" href="${ZALO}" target="_blank" rel="noopener">Liên hệ Zalo</a>`;
   return `<div class="card">
     <h3>${esc(p.name)}</h3>
-    <div class="meta">${p.duration && p.duration !== '-' ? `<span class="tag">⏱ ${esc(p.duration)}</span>` : ''}${p.warranty ? `<span class="tag">🛡 ${esc(p.warranty)}</span>` : ''}${stock}</div>
+    <div class="meta">${p.duration && p.duration !== '-' ? `<span class="tag">⏱ ${esc(p.duration)}</span>` : ''}${p.warranty ? `<span class="tag">🛡 ${esc(p.warranty)}</span>` : ''}${qtyTag}${stock}</div>
     <div class="price">${p.price > 0 ? money(p.price) : 'Liên hệ'}</div>
     ${act}
   </div>`;

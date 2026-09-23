@@ -155,6 +155,7 @@ function doPost(e) {
     if (body.action === 'adminSetStaff') return json(adminSetStaff(body));
     if (body.action === 'adminListProducts') return json(adminListProducts(body));
     if (body.action === 'adminSaveProduct') return json(adminSaveProduct(body));
+    if (body.action === 'adminDeleteProduct') return json(adminDeleteProduct(body));
     return json({ error: 'Yêu cầu không hợp lệ' });
   } catch (err) { return json({ error: String(err.message || err) }); }
 }
@@ -822,16 +823,27 @@ function adminListProducts(b) {
   return { products };
 }
 
-// Thêm mới (id chưa có dòng nào) hoặc sửa (id đã có) — không xoá thật, chỉ ẩn bằng cột "Hiện trên web"
-// vì đơn hàng cũ (DonHang/Kho) còn tham chiếu tới ID sản phẩm.
+// Cho phép gõ tắt kiểu "149k" (=149000) hoặc "1.5tr" (=1500000) ngoài số thường
+function parseMoney(v) {
+  const s = String(v).trim().toLowerCase().replace(/,/g, '.');
+  const m = s.match(/^([\d.]+)\s*(tr|triệu|k)?$/);
+  if (!m) return NaN;
+  let n = parseFloat(m[1]);
+  if (isNaN(n)) return NaN;
+  if (m[2] === 'k') n *= 1000;
+  else if (m[2] === 'tr' || m[2] === 'triệu') n *= 1000000;
+  return Math.round(n);
+}
+
+// Thêm mới (id chưa có dòng nào) hoặc sửa (id đã có).
 function adminSaveProduct(b) {
   requireRole(b.session, [ROLE.ADMIN]);
   const id = String(b.id || '').trim();
   if (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(id)) throw new Error('ID sản phẩm chỉ gồm chữ thường/số/gạch ngang, 2-41 ký tự (vd: proxy-1t)');
   const name = String(b.name || '').trim().slice(0, 200);
   if (!name) throw new Error('Vui lòng nhập tên sản phẩm');
-  const price = Math.round(Number(b.price));
-  if (!(price >= 0)) throw new Error('Giá không hợp lệ');
+  const price = parseMoney(b.price);
+  if (!(price >= 0)) throw new Error('Giá không hợp lệ — chỉ nhập số (vd: 149000 hoặc 149k)');
   const qty = String(b.qty).trim() === '' ? '' : Math.max(0, Math.round(Number(b.qty)) || 0);
   const row = [
     id, String(b.group || '').trim().slice(0, 60), name, String(b.duration || '-').trim().slice(0, 30), price,
@@ -849,6 +861,24 @@ function adminSaveProduct(b) {
     if (foundRow) sh.getRange(foundRow, 1, 1, row.length).setValues([row]);
     else sh.appendRow(row);
     return { ok: true, created: !foundRow };
+  } finally { lock.releaseLock(); }
+}
+
+// Xoá hẳn 1 sản phẩm khỏi danh mục. An toàn để xoá thật vì đơn hàng cũ (DonHang) tự lưu sẵn tên/giá lúc mua,
+// không tra cứu ngược về SanPham — xoá sản phẩm không làm mất/hỏng lịch sử đơn hàng.
+function adminDeleteProduct(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const id = String(b.id || '').trim();
+  if (!id) throw new Error('Thiếu ID sản phẩm');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = SpreadsheetApp.getActive().getSheetByName(SH.products.name);
+    const data = sh.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === id) { sh.deleteRow(i + 1); return { ok: true }; }
+    }
+    throw new Error('Không tìm thấy sản phẩm');
   } finally { lock.releaseLock(); }
 }
 
