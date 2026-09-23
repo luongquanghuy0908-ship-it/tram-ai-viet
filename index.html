@@ -58,6 +58,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-f
 .tag{font-size:12px;padding:3px 8px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);color:var(--muted)}
 .tag.g{color:#86efac;border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
 .tag.y{color:#fcd34d;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.tag.r{color:#fca5a5;border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08)}
 .price{font-size:22px;font-weight:800;margin-top:auto}
 .price small{font-size:13px;color:var(--muted);font-weight:500}
 .empty,.loading{color:var(--muted);text-align:center;padding:40px 0}
@@ -116,6 +117,7 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
 .tier span{flex:1;color:var(--text)}
 .tier b{font-size:14px}
 .tier.on{border-color:var(--brand);background:rgba(109,93,252,.1)}
+.tier.off{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -499,21 +501,26 @@ function groupItems(items) {
 }
 function comboCard(c) {
   const tiers = c.tiers;
+  const firstOk = tiers.findIndex(t => !soldOut(t));
+  const allOut = firstOk === -1;
+  const def = allOut ? 0 : firstOk;
   return `<div class="card">
     <h3>${esc(c.name)}</h3>
     <div class="meta"><span class="tag">Chọn gói bên dưới</span></div>
-    <div class="tiers" data-combo="${esc(c.key)}">${tiers.map((t, i) => `<label class="tier ${i === 0 ? 'on' : ''}">
-      <input type="radio" name="combo-${esc(c.key)}" value="${esc(t.id)}" ${i === 0 ? 'checked' : ''}>
-      <span>${esc(t.duration)}</span><b>${t.price > 0 ? money(t.price) : 'Liên hệ'}</b>
+    <div class="tiers" data-combo="${esc(c.key)}">${tiers.map((t, i) => `<label class="tier ${i === def ? 'on' : ''} ${soldOut(t) ? 'off' : ''}">
+      <input type="radio" name="combo-${esc(c.key)}" value="${esc(t.id)}" ${i === def ? 'checked' : ''} ${soldOut(t) ? 'disabled' : ''}>
+      <span>${esc(t.duration)}${soldOut(t) ? ' · Hết hàng' : ''}</span><b>${t.price > 0 ? money(t.price) : 'Liên hệ'}</b>
     </label>`).join('')}</div>
-    <button class="btn pri block" data-buy="${esc(tiers[0].id)}" data-combo-btn>Mua ngay</button>
+    ${allOut ? '<button class="btn block" disabled>Hết hàng</button>' : `<button class="btn pri block" data-buy="${esc(tiers[def].id)}" data-combo-btn>Mua ngay</button>`}
   </div>`;
 }
+function soldOut(p) { return p.qty !== null && p.qty !== undefined && p.qty <= 0; }
 function card(p) {
   if (p.combo) return comboCard(p);
-  const stock = p.price > 0 ? (p.stock > 0 ? `<span class="tag g">Còn ${p.stock} · giao ngay</span>` : `<span class="tag y">Giao trong 5–30 phút</span>`) : '';
+  const out = p.price > 0 && soldOut(p);
+  const stock = p.price > 0 ? (out ? `<span class="tag r">Hết hàng</span>` : p.stock > 0 ? `<span class="tag g">Còn ${p.stock} · giao ngay</span>` : `<span class="tag y">Giao trong 5–30 phút</span>`) : '';
   const act = p.price > 0
-    ? `<button class="btn pri block" data-buy="${esc(p.id)}">Mua ngay</button>`
+    ? (out ? `<button class="btn block" disabled>Hết hàng</button>` : `<button class="btn pri block" data-buy="${esc(p.id)}">Mua ngay</button>`)
     : `<a class="btn block" href="${ZALO}" target="_blank" rel="noopener">Liên hệ Zalo</a>`;
   return `<div class="card">
     <h3>${esc(p.name)}</h3>
@@ -543,6 +550,8 @@ function renderList() {
 // sẽ tự tách thành nhiều ô nhập riêng, rồi ghép lại 1 dòng khi lưu để cột "Khách gửi thêm" vẫn đọc được trong Sheet.
 function startBuy(id) {
   const p = DATA.products.find(x => x.id === id);
+  if (!p) return;
+  if (soldOut(p)) return toast('Sản phẩm này đã hết hàng');
   if (!user()) return showAuth('login', () => startBuy(id));
   const u = user();
   const enough = (u.balance || 0) >= p.price;

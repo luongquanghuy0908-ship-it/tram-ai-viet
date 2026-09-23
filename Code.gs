@@ -8,7 +8,7 @@ const MIN_TOPUP = 10000;
 const MAX_TOPUP = 20000000;
 
 const SH = {
-  products: { name: 'SanPham', header: ['ID', 'Nhóm', 'Tên sản phẩm', 'Thời hạn', 'Giá (đ) — 0 = Liên hệ', 'Bảo hành', 'Khách cần gửi thêm', 'Hiện trên web (TRUE/FALSE)', 'Mã combo (nhiều dòng cùng mã này gộp thành 1 thẻ chọn gói, để trống nếu bán riêng)', 'Số Gmail cần nhập (chỉ cho sản phẩm combo)', 'Danh sách lựa chọn (cách nhau bởi dấu phẩy — để trống thì khách tự gõ tay)'] },
+  products: { name: 'SanPham', header: ['ID', 'Nhóm', 'Tên sản phẩm', 'Thời hạn', 'Giá (đ) — 0 = Liên hệ', 'Bảo hành', 'Khách cần gửi thêm', 'Hiện trên web (TRUE/FALSE)', 'Mã combo (nhiều dòng cùng mã này gộp thành 1 thẻ chọn gói, để trống nếu bán riêng)', 'Số Gmail cần nhập (chỉ cho sản phẩm combo)', 'Danh sách lựa chọn (cách nhau bởi dấu phẩy — để trống thì khách tự gõ tay)', 'Số lượng còn (0 = hết hàng, sản phẩm Liên hệ để 1)'] },
   stock: { name: 'Kho', header: ['ID sản phẩm', 'Nội dung giao cho khách (acc | mk | hướng dẫn)', 'Mã đơn đã giao', 'Ngày giao'] },
   orders: { name: 'DonHang', header: ['Mã đơn', 'Token', 'Thời gian đặt', 'ID sản phẩm', 'Tên sản phẩm', 'Số tiền', 'Zalo/SĐT khách', 'Khách gửi thêm', 'Trạng thái', 'Nội dung giao cho khách', 'Thời gian nhận tiền', 'Mã GD ngân hàng', 'Họ tên', 'Gmail'] },
   customers: { name: 'KhachHang', header: ['SĐT/Zalo', 'Họ tên', 'Gmail', 'Lần đầu vào', 'Lần cuối vào', 'Số đơn đã đặt', 'Mật khẩu (đã mã hoá, xoá ô này = cho khách đặt lại)', 'Salt', 'Số dư ví (đ)', 'Vai trò (admin/staff, để trống = khách thường)'] },
@@ -69,9 +69,13 @@ function setup() {
       .setValues([SH.products.header.slice(curHeader.length)])
       .setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
   }
-  ss.getSheetByName(SH.orders.name).getRange('A:B').setNumberFormat('@');
+  ss.getSheetByName(SH.orders.name).getRange('A:C').setNumberFormat('@');
   ss.getSheetByName(SH.orders.name).getRange('G:G').setNumberFormat('@');
+  ss.getSheetByName(SH.orders.name).getRange('K:K').setNumberFormat('@');
   ss.getSheetByName(SH.customers.name).getRange('A:A').setNumberFormat('@');
+  ss.getSheetByName(SH.customers.name).getRange('D:E').setNumberFormat('@');
+  ss.getSheetByName(SH.deposits.name).getRange('C:C').setNumberFormat('@');
+  ss.getSheetByName(SH.deposits.name).getRange('H:H').setNumberFormat('@');
   const props = PropertiesService.getScriptProperties();
   if (!props.getProperty('WEBHOOK_KEY')) props.setProperty('WEBHOOK_KEY', randomStr(24, 'abcdefghijkmnpqrstuvwxyz23456789'));
   Logger.log('XONG. Khoá webhook SePay: ' + props.getProperty('WEBHOOK_KEY'));
@@ -163,15 +167,36 @@ function listProducts() {
   });
   const products = ss.getSheetByName(SH.products.name).getDataRange().getValues().slice(1)
     .filter(r => r[0] && r[7] !== false && String(r[7]).toUpperCase() !== 'FALSE')
-    .map(r => ({ id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0, warranty: r[5], need: r[6], stock: stockCount[r[0]] || 0, comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean) }));
+    .map(r => ({ id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0, warranty: r[5], need: r[6], stock: stockCount[r[0]] || 0, comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean), qty: qtyOf(r[11]) }));
   return { shop: SHOP, bank: BANK, products };
+}
+
+// Số lượng còn để bán — null = không giới hạn (chưa thiết lập)
+function qtyOf(v) { return v === '' || v === null || v === undefined ? null : Number(v) || 0; }
+
+function findProductRow(id) {
+  const sh = SpreadsheetApp.getActive().getSheetByName(SH.products.name);
+  const data = sh.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === String(id)) return { sh, row: i + 1, data: data[i] }; }
+  return { sh, row: 0, data: null };
+}
+
+// Trừ 1 vào "Số lượng còn" khi bán được 1 đơn. Bỏ qua (không trừ) nếu để trống = không giới hạn. Trả về false nếu đã hết hàng (hết hàng thì KHÔNG trừ âm).
+function takeQty(id) {
+  const f = findProductRow(id);
+  if (!f.data) return true;
+  const q = qtyOf(f.data[10]);
+  if (q === null) return true;
+  if (q <= 0) return false;
+  f.sh.getRange(f.row, 12).setValue(q - 1);
+  return true;
 }
 
 function findProduct(id) {
   const rows = SpreadsheetApp.getActive().getSheetByName(SH.products.name).getDataRange().getValues().slice(1);
   const r = rows.find(x => String(x[0]) === String(id));
   if (!r || String(r[7]).toUpperCase() === 'FALSE') return null;
-  return { id: String(r[0]), name: r[2] + (r[3] && r[3] !== '-' ? ' — ' + r[3] : ''), price: Number(r[4]) || 0, need: r[6], comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean) };
+  return { id: String(r[0]), name: r[2] + (r[3] && r[3] !== '-' ? ' — ' + r[3] : ''), price: Number(r[4]) || 0, need: r[6], comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean), qty: qtyOf(r[11]) };
 }
 
 function cleanCustomer(b) {
@@ -384,7 +409,7 @@ function myOrders(token) {
   const list = [];
   for (let i = rows.length - 1; i >= 1 && list.length < 30; i--) {
     const r = rows[i];
-    if (normPhone(r[O.contact]) === c.phone) list.push({ code: r[O.code], token: r[O.token], product: r[O.pname], amount: r[O.amount], status: r[O.status], time: r[O.time] });
+    if (normPhone(r[O.contact]) === c.phone) list.push({ code: r[O.code], token: r[O.token], product: r[O.pname], amount: r[O.amount], status: r[O.status], time: fmtDate(r[O.time]) });
   }
   return { orders: list };
 }
@@ -423,6 +448,7 @@ function createOrder(b) {
     if (c.balance < p.price) {
       throw new Error('Số dư ví (' + fmt(c.balance) + ') không đủ. Vui lòng nạp thêm ít nhất ' + fmt(p.price - c.balance) + '.');
     }
+    if (!takeQty(p.id)) throw new Error('Sản phẩm này vừa hết hàng, vui lòng chọn sản phẩm khác hoặc nhắn Zalo shop.');
     const newBalance = changeBalance(c.phone, -p.price);
     bumpOrderCount(c.phone);
     const sh = SpreadsheetApp.getActive().getSheetByName(SH.orders.name);
@@ -482,12 +508,17 @@ function topupStatus(code, token) {
   return result;
 }
 
-function markDepositPaid(sh, row, r, bankRef) {
+// actualAmount = số tiền THỰC NHẬN qua SePay (nếu có) — khách chuyển dư thì cộng đúng số thực nhận, không cộng cứng theo số đã đặt lúc tạo lệnh nạp.
+// Duyệt tay qua menu Sheet không có actualAmount → vẫn cộng theo số đã đặt như trước (không đổi hành vi cũ).
+function markDepositPaid(sh, row, r, bankRef, actualAmount) {
   sh.getRange(row, D.bankRef + 1).setValue(bankRef);
   sh.getRange(row, D.paidAt + 1).setValue(now());
   sh.getRange(row, D.status + 1).setValue(DS.DONE);
-  const newBalance = changeBalance(r[D.phone], Number(r[D.amount]));
-  notifyOwner('✅ Nạp ví ' + r[D.code] + ' — cộng ' + fmt(r[D.amount]) + ' cho ' + r[D.phone] + '. Số dư mới: ' + fmt(newBalance));
+  const requested = Number(r[D.amount]);
+  const credit = Math.max(requested, Number(actualAmount) || 0);
+  const newBalance = changeBalance(r[D.phone], credit);
+  const extra = credit > requested ? ' (khách chuyển dư ' + fmt(credit - requested) + ', đã cộng đủ)' : '';
+  notifyOwner('✅ Nạp ví ' + r[D.code] + ' — cộng ' + fmt(credit) + extra + ' cho ' + r[D.phone] + '. Số dư mới: ' + fmt(newBalance));
   return newBalance;
 }
 
@@ -543,7 +574,7 @@ function handleSepay(e) {
         result = 'Nạp thiếu';
         notifyOwner('⚠️ Nạp ví ' + code + ' chuyển THIẾU: nhận ' + fmt(amount) + ' / cần ' + fmt(found.data[D.amount]) + '\nSĐT: ' + found.data[D.phone]);
       } else {
-        markDepositPaid(sh, found.row, found.data, t.referenceCode || txId);
+        markDepositPaid(sh, found.row, found.data, t.referenceCode || txId, amount);
         result = 'Đã cộng ví';
       }
     } else if (code) {
@@ -633,7 +664,7 @@ function adminPendingOrders(b) {
     const r = rows[i];
     if (!r[O.code] || r[O.status] === ST.DONE) continue;
     list.push({
-      code: r[O.code], time: r[O.time], product: r[O.pname], amount: r[O.amount],
+      code: r[O.code], time: fmtDate(r[O.time]), product: r[O.pname], amount: r[O.amount],
       contact: r[O.contact], status: r[O.status], name: r[O.name], email: r[O.email],
     });
   }
@@ -652,7 +683,7 @@ function adminListCustomers(b) {
       email: String(rows[i][K.email]),
       balance: Number(rows[i][K.balance]) || 0,
       orders: Number(rows[i][K.orders]) || 0,
-      lastSeen: String(rows[i][K.last] || ''),
+      lastSeen: String(fmtDate(rows[i][K.last]) || ''),
       role: String(rows[i][K.role] || ''),
       isBanned: String(rows[i][K.role] || '').toLowerCase() === 'banned'
     });
@@ -700,9 +731,9 @@ function adminOrders(b) {
     if (!r[O.code]) continue;
     if (status && r[O.status] !== status) continue;
     list.push({
-      code: r[O.code], time: r[O.time], pid: r[O.pid], product: r[O.pname], amount: r[O.amount],
+      code: r[O.code], time: fmtDate(r[O.time]), pid: r[O.pid], product: r[O.pname], amount: r[O.amount],
       contact: r[O.contact], extra: r[O.extra], status: r[O.status], content: r[O.content],
-      paidAt: r[O.paidAt], bankRef: r[O.bankRef], name: r[O.name], email: r[O.email],
+      paidAt: fmtDate(r[O.paidAt]), bankRef: r[O.bankRef], name: r[O.name], email: r[O.email],
     });
   }
   return { orders: list };
@@ -786,7 +817,7 @@ function adminListProducts(b) {
   const products = rows.filter(r => r[0]).map(r => ({
     id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0,
     warranty: r[5], need: r[6], visible: String(r[7]).toUpperCase() !== 'FALSE',
-    comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, optionsText: String(r[10] || ''),
+    comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, optionsText: String(r[10] || ''), qty: qtyOf(r[11]),
   }));
   return { products };
 }
@@ -801,11 +832,12 @@ function adminSaveProduct(b) {
   if (!name) throw new Error('Vui lòng nhập tên sản phẩm');
   const price = Math.round(Number(b.price));
   if (!(price >= 0)) throw new Error('Giá không hợp lệ');
+  const qty = String(b.qty).trim() === '' ? '' : Math.max(0, Math.round(Number(b.qty)) || 0);
   const row = [
     id, String(b.group || '').trim().slice(0, 60), name, String(b.duration || '-').trim().slice(0, 30), price,
     String(b.warranty || '').trim().slice(0, 100), String(b.need || '').trim().slice(0, 150),
     b.visible ? true : false, String(b.comboKey || '').trim().slice(0, 40), Math.max(0, Math.round(Number(b.comboCount)) || 0),
-    String(b.optionsText || '').trim().slice(0, 600),
+    String(b.optionsText || '').trim().slice(0, 600), qty,
   ];
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -823,6 +855,8 @@ function adminSaveProduct(b) {
 // ===== Tiện ích =====
 function json(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 function now() { return Utilities.formatDate(new Date(), TZ, 'dd/MM/yyyy HH:mm:ss'); }
+// Sheet đôi khi tự chuyển ô "giờ dạng chữ" thành ô Ngày giờ thật (đọc ra là object Date) → ép về đúng chữ hiển thị trước khi trả cho web.
+function fmtDate(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, 'dd/MM/yyyy HH:mm:ss') : v; }
 function fmt(n) { return Number(n).toLocaleString('vi-VN') + 'đ'; }
 function randomStr(len, chars) {
   let s = '';
