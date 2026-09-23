@@ -151,6 +151,7 @@ function doPost(e) {
     if (body.action === 'adminFindCustomer') return json(adminFindCustomer(body));
     if (body.action === 'adminBanCustomer') return json(adminBanCustomer(body));
     if (body.action === 'adminUnbanCustomer') return json(adminUnbanCustomer(body));
+    if (body.action === 'adminResetPassword') return json(adminResetPassword(body));
     if (body.action === 'adminListStaff') return json(adminListStaff(body));
     if (body.action === 'adminSetStaff') return json(adminSetStaff(body));
     if (body.action === 'adminListProducts') return json(adminListProducts(body));
@@ -320,11 +321,18 @@ function register(b) {
   try {
     const f = findCustomer(c.phone);
     if (f.data && f.data[K.hash]) throw new Error('Số này đã có tài khoản. Hãy bấm "Đăng nhập".');
-    if (f.data) throw new Error('Số điện thoại này đã được đăng ký. Vui lòng đặt lại mật khẩu hoặc liên hệ shop.');
     const salt = newToken().slice(0, 16);
-    const row = [textCell(c.phone), c.name, c.email, now(), now(), 0, hashPw(pw, salt), salt, 0, ''];
-    f.sh.appendRow(row);
-    return { customer: { phone: normPhone(c.phone), name: c.name, email: c.email, balance: 0 }, session: createSession(c.phone, b.remember) };
+    if (f.data) {
+      // Hàng đã có nhưng chưa có mật khẩu (admin vừa đặt lại) → hoàn tất đăng ký lại, GIỮ NGUYÊN số dư ví/vai trò/lịch sử đơn
+      f.sh.getRange(f.row, K.name + 1).setValue(c.name);
+      f.sh.getRange(f.row, K.email + 1).setValue(c.email);
+      f.sh.getRange(f.row, K.hash + 1, 1, 2).setValues([[hashPw(pw, salt), salt]]);
+      f.sh.getRange(f.row, K.last + 1).setValue(now());
+    } else {
+      f.sh.appendRow([textCell(c.phone), c.name, c.email, now(), now(), 0, hashPw(pw, salt), salt, 0, '']);
+    }
+    const fresh = findCustomer(c.phone).data;
+    return { customer: publicCustomer(fresh), session: createSession(c.phone, b.remember) };
   } finally { lock.releaseLock(); }
 }
 
@@ -718,6 +726,23 @@ function adminUnbanCustomer(b) {
     if (!f.data) throw new Error('Không tìm thấy khách hàng');
     f.sh.getRange(f.row, K.role + 1).setValue('');
     notifyOwner('✅ Admin mở khoá tài khoản khách hàng: ' + phone + ' (' + f.data[K.name] + ')');
+    return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
+// Xoá mật khẩu (KHÔNG thể xem lại mật khẩu cũ vì đã băm 1 chiều, không lưu chữ thường) — khách tự vào web bấm
+// "Tạo tài khoản" với đúng SĐT này để đặt mật khẩu mới; số dư ví/vai trò/lịch sử đơn được giữ nguyên.
+function adminResetPassword(b) {
+  requireRole(b.session, [ROLE.ADMIN, ROLE.STAFF]);
+  const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
+  if (!phone) throw new Error('Thiếu số điện thoại');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const f = findCustomer(phone);
+    if (!f.data) throw new Error('Không tìm thấy khách hàng');
+    f.sh.getRange(f.row, K.hash + 1, 1, 2).setValues([['', '']]);
+    notifyOwner('🔑 Admin đã xoá mật khẩu tài khoản: ' + phone + ' (' + f.data[K.name] + ') để khách đặt lại');
     return { ok: true };
   } finally { lock.releaseLock(); }
 }

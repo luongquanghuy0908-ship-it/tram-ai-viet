@@ -155,7 +155,7 @@ function renderNav() {
 
 function renderTabs() {
   const isAdmin = SESSION.customer.role === 'admin';
-  const tabs = [['orders', 'Đơn hàng'], ...(isAdmin ? [['products', 'Sản phẩm'], ['wallet', 'Ví khách'], ['staff', 'Nhân viên']] : [])];
+  const tabs = [['orders', 'Đơn hàng'], ...(isAdmin ? [['products', 'Sản phẩm'], ['wallet', 'Khách hàng'], ['staff', 'Nhân viên']] : [])];
   $('#tabs2').innerHTML = tabs.map(([k, label]) => `<button class="tab2 ${TAB === k ? 'on' : ''}" data-tab="${k}">${label}</button>`).join('');
   $('#tabs2').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; renderTabs(); showTab(); });
 }
@@ -244,44 +244,80 @@ function renderOrders(orders) {
   });
 }
 
-// ===== Ví khách (admin) =====
-function renderWalletTab() {
-  $('#walletTab').innerHTML = `
-    <div class="card">
-      <label>Số điện thoại khách</label>
-      <input id="wPhone" inputmode="tel" placeholder="09xx xxx xxx">
-      <button class="btn pri" style="width:100%;margin-top:10px" id="wSearch">Tìm khách</button>
-      <div class="err" id="wErr"></div>
-      <div id="wResult"></div>
-    </div>`;
-  $('#wSearch').onclick = async () => {
-    const phone = $('#wPhone').value.trim(); $('#wErr').textContent = ''; $('#wResult').innerHTML = '';
-    if (!phone) return;
-    try {
-      const r = await apiPost({ action: 'adminFindCustomer', phone });
-      renderWalletResult(r.customer);
-    } catch (err) { $('#wErr').textContent = err.message; }
-  };
-  $('#wPhone').addEventListener('keydown', e => { if (e.key === 'Enter') $('#wSearch').click(); });
+// ===== Khách hàng (admin) =====
+let ALL_CUSTOMERS = [], CUST_SEARCH = '';
+async function renderWalletTab() {
+  $('#walletTab').innerHTML = `<div class="card"><div class="empty">Đang tải…</div></div>`;
+  try {
+    const r = await apiPost({ action: 'adminListCustomers' });
+    ALL_CUSTOMERS = r.customers;
+    renderCustomerList();
+  } catch (err) { $('#walletTab').innerHTML = `<div class="card"><div class="empty">${esc(err.message)}</div></div>`; }
 }
-function renderWalletResult(c) {
-  $('#wResult').innerHTML = `
-    <div class="balbox"><span>${esc(c.name)} · ${esc(c.phone)}</span><b>${money(c.balance)}</b></div>
-    <label>Số tiền (âm để trừ, dương để cộng)</label>
-    <input id="wDelta" inputmode="numeric" placeholder="Ví dụ 50000 hoặc -20000">
-    <label>Lý do (không bắt buộc, để lưu vết)</label>
-    <input id="wReason" placeholder="Ví dụ: bù lỗi hệ thống">
-    <button class="btn pri" style="width:100%;margin-top:10px" id="wApply">Áp dụng</button>`;
-  $('#wApply').onclick = async () => {
-    const delta = Math.round(Number($('#wDelta').value));
+function renderCustomerList() {
+  $('#walletTab').innerHTML = `
+    <input id="cSearch" placeholder="🔍 Tìm theo tên hoặc số điện thoại" value="${esc(CUST_SEARCH)}">
+    <div id="clist"></div>`;
+  $('#cSearch').oninput = e => { CUST_SEARCH = e.target.value; renderCustomerItems(); };
+  renderCustomerItems();
+}
+function renderCustomerItems() {
+  const q = CUST_SEARCH.trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, '');
+  let list = ALL_CUSTOMERS;
+  if (q) list = list.filter(c => c.name.toLowerCase().includes(q) || (qDigits && c.phone.includes(qDigits)));
+  const el = $('#clist');
+  if (!list.length) { el.innerHTML = '<div class="card"><div class="empty">Không tìm thấy khách nào.</div></div>'; return; }
+  el.innerHTML = list.map(c => `
+    <div class="oitem" data-phone="${esc(c.phone)}">
+      <div class="top">
+        <div><b>${esc(c.name)}</b> ${c.isBanned ? '<span class="st-badge st-short">Đã khoá</span>' : ''}</div>
+        <b>${money(c.balance)}</b>
+      </div>
+      <div class="meta">📱 ${esc(c.phone)} · ✉️ ${esc(c.email)} · ${c.orders} đơn</div>
+      <div class="detail">
+        <label>Số tiền (âm để trừ, dương để cộng)</label>
+        <input inputmode="numeric" placeholder="Ví dụ 50000 hoặc -20000" data-delta>
+        <label>Lý do (không bắt buộc, để lưu vết)</label>
+        <input placeholder="Ví dụ: bù lỗi hệ thống" data-reason>
+        <button class="btn pri sm" data-apply style="margin-top:8px;width:100%">Áp dụng vào ví</button>
+        <div class="row2" style="margin-top:10px">
+          <button class="btn sm" data-resetpw style="flex:1">🔑 Đặt lại mật khẩu</button>
+          <button class="btn ${c.isBanned ? '' : 'bad'} sm" data-ban style="flex:1">${c.isBanned ? '✅ Mở khoá' : '🚫 Khoá tài khoản'}</button>
+        </div>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('.oitem .top').forEach(t => t.onclick = () => t.closest('.oitem').classList.toggle('open'));
+  el.querySelectorAll('[data-apply]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const item = b.closest('.oitem'); const phone = item.dataset.phone;
+    const delta = Math.round(Number(item.querySelector('[data-delta]').value));
     if (!delta) return toast('Nhập số tiền hợp lệ');
-    if (!confirm((delta > 0 ? 'Cộng ' : 'Trừ ') + money(Math.abs(delta)) + ' vào ví ' + c.phone + '?')) return;
+    if (!confirm((delta > 0 ? 'Cộng ' : 'Trừ ') + money(Math.abs(delta)) + ' vào ví ' + phone + '?')) return;
+    b.disabled = true;
     try {
-      const r = await apiPost({ action: 'adminAdjustBalance', phone: c.phone, delta, reason: $('#wReason').value });
-      toast('Số dư mới: ' + money(r.balance));
-      c.balance = r.balance; renderWalletResult(c);
-    } catch (err) { toast(err.message); }
-  };
+      const r = await apiPost({ action: 'adminAdjustBalance', phone, delta, reason: item.querySelector('[data-reason]').value });
+      toast('Số dư mới: ' + money(r.balance)); renderWalletTab();
+    } catch (err) { toast(err.message); b.disabled = false; }
+  });
+  el.querySelectorAll('[data-resetpw]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const phone = b.closest('.oitem').dataset.phone;
+    if (!confirm('Xoá mật khẩu của ' + phone + '? Khách cần vào web bấm "Tạo tài khoản" với đúng số này để đặt mật khẩu mới. Số dư ví và lịch sử đơn vẫn giữ nguyên.')) return;
+    b.disabled = true;
+    try { await apiPost({ action: 'adminResetPassword', phone }); toast('Đã xoá mật khẩu, báo khách đăng ký lại'); }
+    catch (err) { toast(err.message); }
+    b.disabled = false;
+  });
+  el.querySelectorAll('[data-ban]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const item = b.closest('.oitem'); const phone = item.dataset.phone;
+    const toBan = b.textContent.includes('Khoá tài khoản');
+    if (!confirm((toBan ? 'Khoá' : 'Mở khoá') + ' tài khoản ' + phone + '?')) return;
+    b.disabled = true;
+    try { await apiPost({ action: toBan ? 'adminBanCustomer' : 'adminUnbanCustomer', phone }); toast('Đã cập nhật'); renderWalletTab(); }
+    catch (err) { toast(err.message); b.disabled = false; }
+  });
 }
 
 // ===== Nhân viên (admin) =====
