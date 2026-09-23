@@ -188,7 +188,7 @@ function findProductRow(id) {
 function takeQty(id) {
   const f = findProductRow(id);
   if (!f.data) return true;
-  const q = qtyOf(f.data[10]);
+  const q = qtyOf(f.data[11]);
   if (q === null) return true;
   if (q <= 0) return false;
   f.sh.getRange(f.row, 12).setValue(q - 1);
