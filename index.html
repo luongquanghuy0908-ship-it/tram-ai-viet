@@ -110,6 +110,12 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
 .balance{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;margin-bottom:6px}
 .balance b{font-size:24px;display:block;margin-top:2px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:99;display:none}
+.tiers{display:flex;flex-direction:column;gap:6px;margin:2px 0 4px}
+.tier{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:13px}
+.tier input{accent-color:var(--brand);width:16px;height:16px;flex:none}
+.tier span{flex:1;color:var(--text)}
+.tier b{font-size:14px}
+.tier.on{border-color:var(--brand);background:rgba(109,93,252,.1)}
 </style>
 </head>
 <body>
@@ -250,9 +256,10 @@ function showAuth(mode = 'login', next) {
       <label class="chk"><input type="checkbox" name="remember" checked> Ghi nhớ đăng nhập trên máy này</label>
       <div class="err" id="aErr"></div>
       <button class="btn pri block" type="submit">${reg ? 'Tạo tài khoản' : 'Đăng nhập'}</button>
-      <p class="hint">${reg ? 'Đã có tài khoản? <a href="#" data-mode="login">Đăng nhập</a>' : 'Chưa có tài khoản? <a href="#" data-mode="register">Tạo tài khoản</a> · Quên mật khẩu? <a href="' + ZALO + '" target="_blank" rel="noopener">Nhắn Zalo shop</a>'}</p>
+      <p class="hint">${reg ? 'Đã có tài khoản? <a href="#" data-mode="login">Đăng nhập</a>' : 'Chưa có tài khoản? <a href="#" data-mode="register">Tạo tài khoản</a> · <a href="#" id="linkForgot">Quên mật khẩu?</a>'}</p>
     </form>`);
   $('#modal').querySelectorAll('[data-mode]').forEach(b => b.onclick = e => { e.preventDefault(); showAuth(b.dataset.mode); });
+  const lf = $('#linkForgot'); if (lf) lf.onclick = e => { e.preventDefault(); showForgotPassword(); };
   $('#modal').querySelectorAll('.eye').forEach(b => b.onclick = () => {
     const i = b.previousElementSibling; const show = i.type === 'password';
     i.type = show ? 'text' : 'password'; b.textContent = show ? 'Ẩn' : 'Hiện';
@@ -269,6 +276,62 @@ function showAuth(mode = 'login', next) {
       renderUser();
       if (afterLogin) { const n = afterLogin; afterLogin = null; n(); } else { closeModal(); toast('Xin chào ' + r.customer.name); }
     } catch (err) { $('#aErr').textContent = err.message; btn.disabled = false; }
+  };
+}
+
+function showForgotPassword() {
+  openModal(`
+    <h2>Quên mật khẩu</h2>
+    <p class="sub">Nhập số điện thoại/Zalo đã đăng ký, hệ thống gửi mã 6 số vào Gmail đã đăng ký.</p>
+    <form id="fForgot">
+      <label>Số điện thoại / Zalo</label><input name="contact" required inputmode="tel" autocomplete="username" placeholder="09xx xxx xxx">
+      <div class="err" id="fErr"></div>
+      <button class="btn pri block" type="submit">Gửi mã xác nhận</button>
+      <p class="hint"><a href="#" id="backLogin">← Quay lại đăng nhập</a></p>
+    </form>`);
+  $('#backLogin').onclick = e => { e.preventDefault(); showAuth('login'); };
+  $('#fForgot').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; $('#fErr').textContent = '';
+    const contact = new FormData(e.target).get('contact');
+    try {
+      const r = await apiPost({ action: 'forgotpassword', contact });
+      showResetPassword(contact, r.email);
+    } catch (err) { $('#fErr').textContent = err.message; btn.disabled = false; }
+  };
+}
+
+function showResetPassword(contact, emailHint) {
+  openModal(`
+    <h2>Đặt lại mật khẩu</h2>
+    <p class="sub">Đã gửi mã 6 số tới <b>${esc(emailHint)}</b>. Mã có hiệu lực 10 phút.</p>
+    <form id="fReset">
+      <label>Mã xác nhận</label><input name="code" required inputmode="numeric" maxlength="6" placeholder="123456">
+      <label>Mật khẩu mới</label>${pwField('password', 'new-password', 'Ít nhất 6 ký tự')}
+      <div class="err" id="rErr"></div>
+      <button class="btn pri block" type="submit">Đặt lại mật khẩu</button>
+      <p class="hint"><a href="#" id="resendCode">Chưa nhận được mã? Gửi lại</a></p>
+    </form>`);
+  $('#modal').querySelectorAll('.eye').forEach(b => b.onclick = () => {
+    const i = b.previousElementSibling; const show = i.type === 'password';
+    i.type = show ? 'text' : 'password'; b.textContent = show ? 'Ẩn' : 'Hiện';
+  });
+  $('#resendCode').onclick = async e => {
+    e.preventDefault();
+    try { await apiPost({ action: 'forgotpassword', contact }); toast('Đã gửi lại mã'); }
+    catch (err) { toast(err.message); }
+  };
+  $('#fReset').onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('.pri'); btn.disabled = true; $('#rErr').textContent = '';
+    const f = new FormData(e.target);
+    try {
+      const r = await apiPost({ action: 'resetpassword', contact, code: f.get('code'), password: f.get('password'), remember: true });
+      setSession({ token: r.session, customer: r.customer }, true);
+      renderUser();
+      closeModal();
+      toast('Đã đặt lại mật khẩu, xin chào ' + r.customer.name);
+    } catch (err) { $('#rErr').textContent = err.message; btn.disabled = false; }
   };
 }
 
@@ -393,7 +456,32 @@ function renderCats() {
   $('#cats').innerHTML = ['Tất cả', ...groups()].map(g => `<button class="cat ${g === CAT ? 'on' : ''}" data-cat="${esc(g)}">${esc(g)}</button>`).join('');
   $('#cats').querySelectorAll('.cat').forEach(b => b.onclick = () => { CAT = b.dataset.cat; renderCats(); renderList(); });
 }
+// Nhiều dòng sản phẩm cùng comboKey gộp lại thành 1 thẻ, khách chọn gói bằng radio
+function groupItems(items) {
+  const seen = new Set(), out = [];
+  items.forEach(p => {
+    if (p.comboKey) {
+      if (seen.has(p.comboKey)) return;
+      seen.add(p.comboKey);
+      out.push({ combo: true, key: p.comboKey, name: p.name, tiers: items.filter(x => x.comboKey === p.comboKey) });
+    } else out.push(p);
+  });
+  return out;
+}
+function comboCard(c) {
+  const tiers = c.tiers;
+  return `<div class="card">
+    <h3>${esc(c.name)}</h3>
+    <div class="meta"><span class="tag">Chọn gói bên dưới</span></div>
+    <div class="tiers" data-combo="${esc(c.key)}">${tiers.map((t, i) => `<label class="tier ${i === 0 ? 'on' : ''}">
+      <input type="radio" name="combo-${esc(c.key)}" value="${esc(t.id)}" ${i === 0 ? 'checked' : ''}>
+      <span>${esc(t.duration)}</span><b>${t.price > 0 ? money(t.price) : 'Liên hệ'}</b>
+    </label>`).join('')}</div>
+    <button class="btn pri block" data-buy="${esc(tiers[0].id)}" data-combo-btn>Mua ngay</button>
+  </div>`;
+}
 function card(p) {
+  if (p.combo) return comboCard(p);
   const stock = p.price > 0 ? (p.stock > 0 ? `<span class="tag g">Còn ${p.stock} · giao ngay</span>` : `<span class="tag y">Giao trong 5–30 phút</span>`) : '';
   const act = p.price > 0
     ? `<button class="btn pri block" data-buy="${esc(p.id)}">Mua ngay</button>`
@@ -408,25 +496,41 @@ function card(p) {
 function renderList() {
   const gs = CAT === 'Tất cả' ? groups() : [CAT];
   $('#list').innerHTML = gs.map(g => {
-    const items = DATA.products.filter(p => p.group === g);
+    const items = groupItems(DATA.products.filter(p => p.group === g));
     return items.length ? `<h2 class="group-title">${esc(g)}</h2><div class="grid">${items.map(card).join('')}</div>` : '';
   }).join('') || '<div class="empty">Chưa có sản phẩm</div>';
+  $('#list').querySelectorAll('[data-combo] input[type=radio]').forEach(r => r.onchange = () => {
+    const wrap = r.closest('[data-combo]');
+    wrap.querySelectorAll('.tier').forEach(t => t.classList.remove('on'));
+    r.closest('.tier').classList.add('on');
+    const btn = wrap.parentElement.querySelector('[data-combo-btn]');
+    if (btn) btn.dataset.buy = r.value;
+  });
   $('#list').querySelectorAll('[data-buy]').forEach(b => b.onclick = () => startBuy(b.dataset.buy));
 }
 
 // ===== Mua hàng (trừ thẳng vào ví) =====
+// "Khách cần gửi thêm" trong Sheet viết nhiều mục cách nhau bằng "|" (vd "Gmail nhận tài khoản|Số điện thoại")
+// sẽ tự tách thành nhiều ô nhập riêng, rồi ghép lại 1 dòng khi lưu để cột "Khách gửi thêm" vẫn đọc được trong Sheet.
 function startBuy(id) {
   const p = DATA.products.find(x => x.id === id);
   if (!user()) return showAuth('login', () => startBuy(id));
   const u = user();
   const enough = (u.balance || 0) >= p.price;
+  const needFields = (p.comboCount > 0 || !p.need) ? [] : p.need.split('|').map(s => s.trim()).filter(Boolean);
   openModal(`
     <h2>${esc(p.name)}</h2>
     <p class="sub">${esc([p.duration !== '-' ? p.duration : '', p.warranty].filter(Boolean).join(' · '))}</p>
     <div class="sum"><span>Giá</span><b>${money(p.price)}</b></div>
     <div class="row"><span>Số dư ví hiện tại</span><b>${money(u.balance || 0)}</b></div>
     <form id="fBuy">
-      ${p.need ? `<label>${esc(p.need)} *</label><input name="extra" required maxlength="300">` : `<label>Ghi chú cho shop (không bắt buộc)</label><input name="extra" maxlength="300">`}
+      ${p.comboCount > 0
+        ? `<label>${esc(p.need || 'Danh sách Gmail cần nâng cấp')} *</label><textarea name="extra" required maxlength="600" rows="${Math.max(2, p.comboCount)}" placeholder="Mỗi dòng 1 Gmail"></textarea><p class="sub" style="margin:6px 0 0">Nhập đúng <b>${p.comboCount}</b> Gmail, mỗi dòng 1 Gmail.</p>`
+        : needFields.length > 1
+          ? needFields.map((label, i) => `<label>${esc(label)} *</label><input name="extra${i}" required maxlength="150">`).join('')
+          : needFields.length === 1
+            ? `<label>${esc(needFields[0])} *</label><input name="extra" required maxlength="300">`
+            : `<label>Ghi chú cho shop (không bắt buộc)</label><input name="extra" maxlength="300">`}
       <div class="err" id="bErr">${enough ? '' : 'Số dư không đủ, cần nạp thêm ' + money(p.price - (u.balance || 0)) + '.'}</div>
       ${enough
         ? `<button class="btn pri block" type="submit">Xác nhận mua — trừ ${money(p.price)} trong ví</button>`
@@ -436,8 +540,18 @@ function startBuy(id) {
   $('#fBuy').onsubmit = async e => {
     e.preventDefault();
     const btn = e.target.querySelector('.pri'); btn.disabled = true; btn.textContent = 'Đang xử lý…'; $('#bErr').textContent = '';
+    const fd = new FormData(e.target);
+    const extra = needFields.length > 1 ? needFields.map((_, i) => (fd.get('extra' + i) || '').trim()).join(' | ') : (fd.get('extra') || '');
+    if (p.comboCount > 0) {
+      const n = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
+      if (n !== p.comboCount) {
+        $('#bErr').textContent = 'Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.';
+        btn.disabled = false; btn.textContent = 'Xác nhận mua — trừ ' + money(p.price) + ' trong ví';
+        return;
+      }
+    }
     try {
-      const o = await apiPost({ action: 'order', productId: id, session: getSession().token, extra: new FormData(e.target).get('extra') });
+      const o = await apiPost({ action: 'order', productId: id, session: getSession().token, extra });
       updateBalance(o.balance);
       const list = store.get(LS_ORDERS, []);
       list.unshift({ code: o.code, token: o.token, product: o.product, amount: o.amount, at: Date.now() });
