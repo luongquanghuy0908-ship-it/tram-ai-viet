@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Quản trị – Trạm AI Việt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b1020;--bg2:#111833;--card:#151d3b;--line:#26305a;--text:#eef1ff;--muted:#9aa4cf;
+  --brand:#6d5dfc;--brand2:#22d3ee;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
+a{color:inherit}
+button{font-family:inherit;cursor:pointer;border:0}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:58px;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px}
+.logo i{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-style:normal;font-size:15px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;background:var(--bg2);color:var(--text);border:1px solid var(--line);white-space:nowrap}
+.btn:hover{border-color:var(--brand)}
+.btn.pri{background:linear-gradient(135deg,var(--brand),#8b5cf6);border:0;color:#fff}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn.bad{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);color:#fca5a5}
+.btn:disabled{opacity:.6;cursor:wait}
+main{padding:20px 0 60px}
+.tabs2{display:flex;gap:8px;margin-bottom:18px;overflow-x:auto}
+.tab2{padding:9px 16px;border-radius:99px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:14px;white-space:nowrap}
+.tab2.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.filters{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px}
+.fchip{padding:7px 14px;border-radius:99px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
+.fchip.on{background:var(--card);border-color:var(--brand);color:var(--text)}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 6px}
+input,textarea,select{width:100%;padding:11px 13px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--text);font-family:inherit;font-size:15px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brand)}
+.err{color:#fca5a5;font-size:14px;margin-top:10px;min-height:20px}
+.oitem{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.oitem .top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.oitem code{background:var(--card);padding:2px 8px;border-radius:6px;font-size:13px}
+.oitem .meta{color:var(--muted);font-size:13px;margin-top:6px}
+.st-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px}
+.st-pending{background:rgba(154,164,207,.15);color:var(--muted)}
+.st-paid{background:rgba(245,158,11,.15);color:#fcd34d}
+.st-done{background:rgba(34,197,94,.15);color:#86efac}
+.st-short{background:rgba(239,68,68,.15);color:#fca5a5}
+.oitem .detail{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);display:none}
+.oitem.open .detail{display:block}
+.row2{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.row2 .btn{flex:1}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:99;display:none}
+.staffitem{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.staffitem .info b{display:block}
+.staffitem .info small{color:var(--muted)}
+.pill{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(109,93,252,.15);color:#c4bdff}
+.balbox{display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+.balbox b{font-size:22px}
+.login-wrap{max-width:380px;margin:60px auto;padding:0 16px}
+h1{font-size:20px;margin-bottom:4px}
+.sub{color:var(--muted);font-size:14px;margin-bottom:16px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="logo"><i>⚡</i>Quản trị Trạm AI Việt</div>
+    <div id="navRight"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="loginView" class="login-wrap">
+    <h1>Đăng nhập quản trị</h1>
+    <p class="sub">Dùng tài khoản đã được cấp quyền admin/nhân viên.</p>
+    <form id="fLogin">
+      <label>Số điện thoại / Zalo</label><input name="contact" required inputmode="tel" placeholder="09xx xxx xxx">
+      <label>Mật khẩu</label><input name="password" type="password" required minlength="6" placeholder="Mật khẩu">
+      <div class="err" id="lErr"></div>
+      <button class="btn pri" style="width:100%;margin-top:6px" type="submit">Đăng nhập</button>
+    </form>
+  </div>
+
+  <div id="dashView" style="display:none">
+    <div class="tabs2" id="tabs2"></div>
+    <div id="ordersTab"></div>
+    <div id="walletTab" style="display:none"></div>
+    <div id="staffTab" style="display:none"></div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbzV_KlAwzimsh1zEaaTZvO9zcxq5ZmQmTbye17b9NYYNJ1DqeHCT9o20xUXlES1dLNlUw/exec';
+const LS_ADMIN = 'tav_admin_session';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => Number(n).toLocaleString('vi-VN') + ' đ';
+
+let SESSION = null, TAB = 'orders', ORDER_FILTER = '';
+
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2200); }
+
+async function fetchJson(url, opt = {}, ms = 20000) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  try {
+    const r = await fetch(url, { ...opt, signal: ac.signal });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    return j;
+  } catch (e) { if (e.message && e.message !== 'Failed to fetch') throw e; throw new Error('Mạng chậm, vui lòng thử lại'); }
+  finally { clearTimeout(t); }
+}
+async function apiPost(body) {
+  try {
+    return await fetchJson(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...body, session: body.session || (SESSION && SESSION.token) }) }, 30000);
+  } catch (err) {
+    if (/đăng nhập lại|quyền truy cập/.test(err.message)) { clearSavedSession(); location.reload(); }
+    throw err;
+  }
+}
+
+function getSavedSession() { try { const v = localStorage.getItem(LS_ADMIN); return v ? JSON.parse(v) : null; } catch { return null; } }
+function saveSession(v) { SESSION = v; try { localStorage.setItem(LS_ADMIN, JSON.stringify(v)); } catch {} }
+function clearSavedSession() { SESSION = null; try { localStorage.removeItem(LS_ADMIN); } catch {} }
+
+$('#fLogin').onsubmit = async e => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button'); btn.disabled = true; $('#lErr').textContent = '';
+  const f = new FormData(e.target);
+  try {
+    const r = await fetchJson(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'login', contact: f.get('contact'), password: f.get('password'), remember: true }) }, 20000);
+    if (r.customer.role !== 'admin' && r.customer.role !== 'staff') { $('#lErr').textContent = 'Tài khoản này không có quyền quản trị.'; btn.disabled = false; return; }
+    saveSession({ token: r.session, customer: r.customer });
+    enterDash();
+  } catch (err) { $('#lErr').textContent = err.message; btn.disabled = false; }
+};
+
+function renderNav() {
+  const c = SESSION.customer;
+  $('#navRight').innerHTML = `<span style="color:var(--muted);font-size:13px;margin-right:10px">${esc(c.name)} · <span class="pill">${c.role === 'admin' ? 'Admin' : 'Nhân viên'}</span></span><button class="btn sm" id="btnLogout">Đăng xuất</button>`;
+  $('#btnLogout').onclick = () => { clearSavedSession(); location.reload(); };
+}
+
+function renderTabs() {
+  const isAdmin = SESSION.customer.role === 'admin';
+  const tabs = [['orders', 'Đơn hàng'], ...(isAdmin ? [['wallet', 'Ví khách'], ['staff', 'Nhân viên']] : [])];
+  $('#tabs2').innerHTML = tabs.map(([k, label]) => `<button class="tab2 ${TAB === k ? 'on' : ''}" data-tab="${k}">${label}</button>`).join('');
+  $('#tabs2').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; renderTabs(); showTab(); });
+}
+
+function showTab() {
+  $('#ordersTab').style.display = TAB === 'orders' ? 'block' : 'none';
+  $('#walletTab').style.display = TAB === 'wallet' ? 'block' : 'none';
+  $('#staffTab').style.display = TAB === 'staff' ? 'block' : 'none';
+  if (TAB === 'orders') loadOrders();
+  if (TAB === 'wallet') renderWalletTab();
+  if (TAB === 'staff') loadStaff();
+}
+
+// ===== Đơn hàng =====
+const STATUS_LIST = ['', 'Đã thanh toán - chờ giao', 'Chờ thanh toán', 'Chuyển thiếu', 'Đã giao'];
+const STATUS_LABEL = { '': 'Tất cả', 'Đã thanh toán - chờ giao': 'Cần giao', 'Chờ thanh toán': 'Chờ thanh toán', 'Chuyển thiếu': 'Chuyển thiếu', 'Đã giao': 'Đã giao' };
+function stBadgeClass(s) {
+  if (s === 'Đã giao') return 'st-done';
+  if (s === 'Đã thanh toán - chờ giao') return 'st-paid';
+  if (s === 'Chuyển thiếu') return 'st-short';
+  return 'st-pending';
+}
+async function loadOrders() {
+  $('#ordersTab').innerHTML = `
+    <div class="filters" id="ofilters">${STATUS_LIST.map(s => `<button class="fchip ${ORDER_FILTER === s ? 'on' : ''}" data-f="${esc(s)}">${STATUS_LABEL[s]}</button>`).join('')}</div>
+    <div id="olist" class="card"><div class="empty">Đang tải…</div></div>`;
+  $('#ofilters').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { ORDER_FILTER = b.dataset.f; loadOrders(); });
+  try {
+    const r = await apiPost({ action: 'adminOrders', status: ORDER_FILTER });
+    renderOrders(r.orders);
+  } catch (err) { $('#olist').innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
+}
+function renderOrders(orders) {
+  if (!orders.length) { $('#olist').outerHTML = '<div class="card"><div class="empty">Không có đơn nào.</div></div>'; return; }
+  $('#olist').outerHTML = orders.map(o => `
+    <div class="oitem" data-code="${esc(o.code)}">
+      <div class="top">
+        <div><code>${esc(o.code)}</code> <span class="st-badge ${stBadgeClass(o.status)}">${esc(o.status)}</span></div>
+        <b>${money(o.amount)}</b>
+      </div>
+      <div class="meta">${esc(o.product)} · ${esc(o.time)}</div>
+      <div class="meta">Khách: ${esc(o.name)} · ${esc(o.contact)} · ${esc(o.email)}${o.extra ? '<br>Khách gửi: ' + esc(o.extra) : ''}</div>
+      <div class="detail">
+        <label>Nội dung giao cho khách (acc | mk | hướng dẫn)</label>
+        <textarea rows="3" data-content>${esc(o.content)}</textarea>
+        <div class="row2">
+          <button class="btn sm" data-save>Lưu nội dung</button>
+          ${o.status !== 'Đã giao' ? '<button class="btn pri sm" data-done>✅ Đánh dấu đã giao</button>' : ''}
+        </div>
+      </div>
+    </div>`).join('');
+  $('#ordersTab').querySelectorAll('.oitem .top').forEach(el => el.onclick = () => el.closest('.oitem').classList.toggle('open'));
+  $('#ordersTab').querySelectorAll('[data-save]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const item = b.closest('.oitem'); const content = item.querySelector('[data-content]').value;
+    b.disabled = true;
+    try { await apiPost({ action: 'adminUpdateOrder', code: item.dataset.code, content }); toast('Đã lưu'); }
+    catch (err) { toast(err.message); }
+    b.disabled = false;
+  });
+  $('#ordersTab').querySelectorAll('[data-done]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const item = b.closest('.oitem'); const content = item.querySelector('[data-content]').value;
+    if (!confirm('Xác nhận đã giao đơn ' + item.dataset.code + '? Khách sẽ nhận email thông báo.')) return;
+    b.disabled = true;
+    try { await apiPost({ action: 'adminUpdateOrder', code: item.dataset.code, content, markDone: true }); toast('Đã đánh dấu giao xong'); loadOrders(); }
+    catch (err) { toast(err.message); b.disabled = false; }
+  });
+}
+
+// ===== Ví khách (admin) =====
+function renderWalletTab() {
+  $('#walletTab').innerHTML = `
+    <div class="card">
+      <label>Số điện thoại khách</label>
+      <input id="wPhone" inputmode="tel" placeholder="09xx xxx xxx">
+      <button class="btn pri" style="width:100%;margin-top:10px" id="wSearch">Tìm khách</button>
+      <div class="err" id="wErr"></div>
+      <div id="wResult"></div>
+    </div>`;
+  $('#wSearch').onclick = async () => {
+    const phone = $('#wPhone').value.trim(); $('#wErr').textContent = ''; $('#wResult').innerHTML = '';
+    if (!phone) return;
+    try {
+      const r = await apiPost({ action: 'adminFindCustomer', phone });
+      renderWalletResult(r.customer);
+    } catch (err) { $('#wErr').textContent = err.message; }
+  };
+  $('#wPhone').addEventListener('keydown', e => { if (e.key === 'Enter') $('#wSearch').click(); });
+}
+function renderWalletResult(c) {
+  $('#wResult').innerHTML = `
+    <div class="balbox"><span>${esc(c.name)} · ${esc(c.phone)}</span><b>${money(c.balance)}</b></div>
+    <label>Số tiền (âm để trừ, dương để cộng)</label>
+    <input id="wDelta" inputmode="numeric" placeholder="Ví dụ 50000 hoặc -20000">
+    <label>Lý do (không bắt buộc, để lưu vết)</label>
+    <input id="wReason" placeholder="Ví dụ: bù lỗi hệ thống">
+    <button class="btn pri" style="width:100%;margin-top:10px" id="wApply">Áp dụng</button>`;
+  $('#wApply').onclick = async () => {
+    const delta = Math.round(Number($('#wDelta').value));
+    if (!delta) return toast('Nhập số tiền hợp lệ');
+    if (!confirm((delta > 0 ? 'Cộng ' : 'Trừ ') + money(Math.abs(delta)) + ' vào ví ' + c.phone + '?')) return;
+    try {
+      const r = await apiPost({ action: 'adminAdjustBalance', phone: c.phone, delta, reason: $('#wReason').value });
+      toast('Số dư mới: ' + money(r.balance));
+      c.balance = r.balance; renderWalletResult(c);
+    } catch (err) { toast(err.message); }
+  };
+}
+
+// ===== Nhân viên (admin) =====
+async function loadStaff() {
+  $('#staffTab').innerHTML = `
+    <div class="card">
+      <label>Thêm / cấp quyền theo số điện thoại</label>
+      <input id="sPhone" inputmode="tel" placeholder="09xx xxx xxx (người đó cần đã có tài khoản trên web)">
+      <label>Vai trò</label>
+      <select id="sRole"><option value="staff">Nhân viên (chỉ xử lý đơn hàng)</option><option value="admin">Admin (toàn quyền)</option></select>
+      <button class="btn pri" style="width:100%;margin-top:10px" id="sAdd">Cấp quyền</button>
+      <div class="err" id="sErr"></div>
+    </div>
+    <div id="slist" class="card"><div class="empty">Đang tải…</div></div>`;
+  $('#sAdd').onclick = async () => {
+    const phone = $('#sPhone').value.trim(), role = $('#sRole').value; $('#sErr').textContent = '';
+    if (!phone) return;
+    try { await apiPost({ action: 'adminSetStaff', phone, role }); toast('Đã cấp quyền'); $('#sPhone').value = ''; loadStaff(); }
+    catch (err) { $('#sErr').textContent = err.message; }
+  };
+  try {
+    const r = await apiPost({ action: 'adminListStaff' });
+    renderStaff(r.staff);
+  } catch (err) { $('#slist').innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
+}
+function renderStaff(staff) {
+  if (!staff.length) { $('#slist').innerHTML = '<div class="empty">Chưa có nhân viên nào ngoài bạn.</div>'; return; }
+  $('#slist').innerHTML = staff.map(s => `
+    <div class="staffitem">
+      <div class="info"><b>${esc(s.name)} · ${esc(s.phone)}</b><small>${esc(s.email)} · <span class="pill">${s.role === 'admin' ? 'Admin' : 'Nhân viên'}</span></small></div>
+      <button class="btn bad sm" data-remove="${esc(s.phone)}">Gỡ quyền</button>
+    </div>`).join('');
+  $('#slist').querySelectorAll('[data-remove]').forEach(b => b.onclick = async () => {
+    if (!confirm('Gỡ quyền quản trị của ' + b.dataset.remove + '?')) return;
+    try { await apiPost({ action: 'adminSetStaff', phone: b.dataset.remove, role: '' }); toast('Đã gỡ quyền'); loadStaff(); }
+    catch (err) { toast(err.message); }
+  });
+}
+
+function enterDash() {
+  $('#loginView').style.display = 'none';
+  $('#dashView').style.display = 'block';
+  renderNav(); renderTabs(); showTab();
+}
+
+(function init() {
+  const s = getSavedSession();
+  if (s) { SESSION = s; enterDash(); }
+})();
+</script>
+</body>
+</html>

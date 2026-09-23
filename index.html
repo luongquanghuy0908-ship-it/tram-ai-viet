@@ -125,6 +125,7 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
     <a class="logo" href="./"><i>⚡</i>Trạm AI Việt</a>
     <div class="nav-r">
       <span class="user-chip" id="userChip"></span>
+      <button class="btn" id="btnGuide"><span class="long">Hướng dẫn </span>mua hàng</button>
       <button class="btn" id="btnOrders">Đơn<span class="long"> của tôi</span></button>
       <button class="btn pri" id="btnLogin">Đăng nhập</button>
     </div>
@@ -426,6 +427,21 @@ function showAccount() {
 }
 $('#btnLogin').onclick = () => user() ? showAccount() : showAuth('login', null);
 
+function showGuide() {
+  openModal(`
+    <h2>Hướng dẫn mua hàng</h2>
+    <p class="sub">4 bước đơn giản, tự động 24/7 — không cần chờ shop trả lời.</p>
+    <div class="olist">
+      <div class="oitem"><b>Bước 1 · Chọn sản phẩm</b><small>Bấm "Mua ngay" ở sản phẩm bạn muốn mua trên trang chủ.</small></div>
+      <div class="oitem"><b>Bước 2 · Đăng nhập / Tạo tài khoản</b><small>Dùng số điện thoại + mật khẩu. Tài khoản dùng để lưu ví tiền và xem lại đơn hàng trên mọi máy.</small></div>
+      <div class="oitem"><b>Bước 3 · Nạp tiền vào ví</b><small>Nạp 1 lần bằng chuyển khoản QR (đúng nội dung + đúng số tiền) — hệ thống tự cộng ví trong vài giây. Mua nhiều món chỉ cần nạp 1 lần.</small></div>
+      <div class="oitem"><b>Bước 4 · Bấm mua — nhận hàng tự động</b><small>Hàng có sẵn sẽ giao ngay. Hết hàng thì "Đã thanh toán - chờ giao", shop giao tay trong 5–30 phút, có báo lại khi xong.</small></div>
+    </div>
+    <div class="note">💬 Có thắc mắc trong lúc mua, bấm "Nhắn Zalo" ở bất kỳ đâu trên trang để được hỗ trợ ngay.</div>
+    <a class="btn pri block" style="margin-top:12px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo shop</a>`);
+}
+$('#btnGuide').onclick = showGuide;
+
 async function checkSession() {
   const s = getSession();
   if (!s) return;
@@ -594,11 +610,22 @@ function showPaidWaiting(o) {
   openModal(`
     <div class="done">
       <div class="ic">✅</div>
-      <h2 style="padding:0">Đã nhận tiền!</h2>
-      <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)}<br>Shop đang chuẩn bị hàng, thường trong 5–30 phút. Trang này tự cập nhật khi có hàng.</p>
-      <div class="wait" style="justify-content:center"><div class="spin"></div><span>Đang chờ shop giao…</span></div>
-      <a class="btn block" style="margin-top:14px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo kèm mã ${esc(o.code)}</a>
+      <h2 style="padding:0">Thanh toán thành công!</h2>
+      <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)} · ${money(o.amount)}<br>Shop đã nhận được tiền, đang chuẩn bị hàng cho bạn — thường xong trong 5–30 phút.</p>
+      <div class="row"><span>Trạng thái</span><b style="color:var(--warn)">Đang chuẩn bị hàng</b></div>
+      <div class="note">⏰ Nếu <b>quá 30 phút</b> chưa nhận được hàng, vui lòng nhắn Zalo kèm mã đơn <b>${esc(o.code)}</b> để được hỗ trợ ngay.</div>
+      <button class="btn block" style="margin-top:12px" id="btnCheckStatus">🔄 Xem trạng thái đơn hàng</button>
+      <a class="btn block" style="margin-top:8px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo kèm mã ${esc(o.code)}</a>
     </div>`);
+  $('#btnCheckStatus').onclick = async () => {
+    const b = $('#btnCheckStatus'); b.disabled = true; b.textContent = 'Đang kiểm tra…';
+    try {
+      const s = await apiGet({ action: 'status', code: o.code, token: o.token }, 2);
+      s.token = o.token;
+      showPay(s);
+      if (s.status === o.status) toast('Đơn vẫn đang chuẩn bị hàng');
+    } catch (err) { toast(err.message); b.disabled = false; b.textContent = '🔄 Xem trạng thái đơn hàng'; }
+  };
   startPoll(o);
 }
 
