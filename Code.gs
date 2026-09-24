@@ -308,6 +308,7 @@ function requireSession(token) {
       if (rows[i][0] === h) {
         if (Number(rows[i][3]) > Date.now()) {
           const f = findCustomer(rows[i][1]);
+          if (f.data && String(f.data[K.role] || '').toLowerCase() === 'banned') throw new Error('Tài khoản này đã bị khoá. Vui lòng nhắn Zalo shop để được hỗ trợ.');
           if (f.data) return publicCustomer(f.data);
         }
         break;
@@ -545,9 +546,9 @@ function markDepositPaid(sh, row, r, bankRef, actualAmount) {
   sh.getRange(row, D.paidAt + 1).setValue(now());
   sh.getRange(row, D.status + 1).setValue(DS.DONE);
   const requested = Number(r[D.amount]);
-  const credit = Math.max(requested, Number(actualAmount) || 0);
+  const credit = Number(actualAmount) > 0 ? Number(actualAmount) : requested;
   const newBalance = changeBalance(r[D.phone], credit, 'Nạp ví', r[D.code] + (bankRef ? ' · GD ' + bankRef : ''));
-  const extra = credit > requested ? ' (khách chuyển dư ' + fmt(credit - requested) + ', đã cộng đủ)' : '';
+  const extra = credit > requested ? ' (khách chuyển dư ' + fmt(credit - requested) + ', đã cộng đủ)' : credit < requested ? ' (khách chuyển thiếu ' + fmt(requested - credit) + ', đã cộng theo số tiền thực nhận)' : '';
   notifyOwner('✅ Nạp ví ' + r[D.code] + ' — cộng ' + fmt(credit) + extra + ' cho ' + r[D.phone] + '. Số dư mới: ' + fmt(newBalance));
   return newBalance;
 }
@@ -597,12 +598,11 @@ function handleSepay(e) {
       const sh = sheetOf(SH.deposits);
       const found = findDepositRow(sh, code);
       if (!found) result = 'Mã nạp không tồn tại';
-      else if (found.data[D.status] !== DS.PENDING && found.data[D.status] !== DS.SHORT) result = 'Lệnh nạp đã xử lý trước đó';
-      else if (amount < Number(found.data[D.amount])) {
-        sh.getRange(found.row, D.status + 1).setValue(DS.SHORT);
-        sh.getRange(found.row, D.bankRef + 1).setValue(t.referenceCode || txId);
-        result = 'Nạp thiếu';
-        notifyOwner('⚠️ Nạp ví ' + code + ' chuyển THIẾU: nhận ' + fmt(amount) + ' / cần ' + fmt(found.data[D.amount]) + '\nSĐT: ' + found.data[D.phone]);
+      else if (found.data[D.status] === DS.DONE) {
+        // Khách quét lại mã QR cũ / chuyển thêm cùng nội dung → vẫn cộng tiền thực nhận vào ví, không để mất tiền
+        const nb = changeBalance(found.data[D.phone], amount, 'Nạp ví', code + ' (chuyển thêm) · GD ' + (t.referenceCode || txId));
+        notifyOwner('✅ Nhận thêm ' + fmt(amount) + ' cùng mã nạp ' + code + ' — đã cộng ví ' + found.data[D.phone] + '. Số dư mới: ' + fmt(nb));
+        result = 'Đã cộng ví (chuyển thêm)';
       } else {
         markDepositPaid(sh, found.row, found.data, t.referenceCode || txId, amount);
         result = 'Đã cộng ví';
@@ -915,12 +915,20 @@ function dailyBackup() {
     if (old) bk.deleteSheet(old);
     src.copyTo(bk).setName(name);
   });
+  cleanExpiredSessions();
   const cutoff = Utilities.formatDate(new Date(Date.now() - 14 * 864e5), TZ, 'yyyy-MM-dd');
   bk.getSheets().forEach(s => {
     const m = s.getName().match(/^(\d{4}-\d{2}-\d{2})_/);
     if (m && m[1] < cutoff && bk.getSheets().length > 1) bk.deleteSheet(s);
   });
   return bk.getUrl();
+}
+
+function cleanExpiredSessions() {
+  const sh = sheetOf(SH.sessions);
+  const rows = sh.getDataRange().getValues();
+  const t = Date.now();
+  for (let i = rows.length - 1; i >= 1; i--) if (!(Number(rows[i][3]) > t)) sh.deleteRow(i + 1);
 }
 
 function adminBackupNow(b) {
