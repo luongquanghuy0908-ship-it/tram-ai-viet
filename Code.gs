@@ -8,7 +8,8 @@ const MIN_TOPUP = 10000;
 const MAX_TOPUP = 20000000;
 
 const SH = {
-  products: { name: 'SanPham', header: ['ID', 'Nhóm', 'Tên sản phẩm', 'Thời hạn', 'Giá (đ) — 0 = Liên hệ', 'Bảo hành', 'Khách cần gửi thêm', 'Hiện trên web (TRUE/FALSE)', 'Mã combo (nhiều dòng cùng mã này gộp thành 1 thẻ chọn gói, để trống nếu bán riêng)', 'Số Gmail cần nhập (chỉ cho sản phẩm combo)', 'Danh sách lựa chọn (cách nhau bởi dấu phẩy — để trống thì khách tự gõ tay)', 'Số lượng còn (0 = hết hàng, sản phẩm Liên hệ để 1)'] },
+  products: { name: 'SanPham', header: ['ID', 'Nhóm', 'Tên sản phẩm', 'Thời hạn', 'Giá (đ) — 0 = Liên hệ', 'Bảo hành', 'Khách cần gửi thêm', 'Hiện trên web (TRUE/FALSE)', 'Mã combo (nhiều dòng cùng mã này gộp thành 1 thẻ chọn gói, để trống nếu bán riêng)', 'Số Gmail cần nhập (chỉ cho sản phẩm combo)', 'Danh sách lựa chọn (cách nhau bởi dấu phẩy — để trống thì khách tự gõ tay)', 'Số lượng còn (0 = hết hàng, sản phẩm Liên hệ để 1)', 'Nội dung tự giao ngay khi mua (link khoá học, hướng dẫn... — để trống nếu giao từ Kho hoặc giao tay)'] },
+  ledger: { name: 'SoCaiVi', header: ['Thời gian', 'SĐT', 'Loại', 'Số tiền (+/-)', 'Số dư trước', 'Số dư sau', 'Mã đơn / ghi chú'] },
   stock: { name: 'Kho', header: ['ID sản phẩm', 'Nội dung giao cho khách (acc | mk | hướng dẫn)', 'Mã đơn đã giao', 'Ngày giao'] },
   orders: { name: 'DonHang', header: ['Mã đơn', 'Token', 'Thời gian đặt', 'ID sản phẩm', 'Tên sản phẩm', 'Số tiền', 'Zalo/SĐT khách', 'Khách gửi thêm', 'Trạng thái', 'Nội dung giao cho khách', 'Thời gian nhận tiền', 'Mã GD ngân hàng', 'Họ tên', 'Gmail'] },
   customers: { name: 'KhachHang', header: ['SĐT/Zalo', 'Họ tên', 'Gmail', 'Lần đầu vào', 'Lần cuối vào', 'Số đơn đã đặt', 'Mật khẩu (đã mã hoá, xoá ô này = cho khách đặt lại)', 'Salt', 'Số dư ví (đ)', 'Vai trò (admin/staff, để trống = khách thường)'] },
@@ -149,6 +150,9 @@ function doPost(e) {
     if (body.action === 'adminAdjustBalance') return json(adminAdjustBalance(body));
     if (body.action === 'adminListCustomers') return json(adminListCustomers(body));
     if (body.action === 'adminExportCustomers') return json(adminExportCustomers(body));
+    if (body.action === 'adminCustomerLedger') return json(adminCustomerLedger(body));
+    if (body.action === 'adminReconcile') return json(adminReconcile(body));
+    if (body.action === 'adminBackupNow') return json(adminBackupNow(body));
     if (body.action === 'adminFindCustomer') return json(adminFindCustomer(body));
     if (body.action === 'adminBanCustomer') return json(adminBanCustomer(body));
     if (body.action === 'adminUnbanCustomer') return json(adminUnbanCustomer(body));
@@ -199,7 +203,7 @@ function findProduct(id) {
   const rows = SpreadsheetApp.getActive().getSheetByName(SH.products.name).getDataRange().getValues().slice(1);
   const r = rows.find(x => String(x[0]) === String(id));
   if (!r || String(r[7]).toUpperCase() === 'FALSE') return null;
-  return { id: String(r[0]), name: r[2] + (r[3] && r[3] !== '-' ? ' — ' + r[3] : ''), price: Number(r[4]) || 0, need: r[6], comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean), qty: qtyOf(r[11]) };
+  return { id: String(r[0]), name: r[2] + (r[3] && r[3] !== '-' ? ' — ' + r[3] : ''), price: Number(r[4]) || 0, need: r[6], comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean), qty: qtyOf(r[11]), deliver: String(r[12] || '').trim() };
 }
 
 function cleanCustomer(b) {
@@ -264,14 +268,22 @@ function requireRole(token, roles) {
 }
 
 // delta > 0 = cộng ví, delta < 0 = trừ ví (mua hàng). Trả về số dư mới.
-function changeBalance(phone, delta) {
+function changeBalance(phone, delta, kind, ref) {
   const f = findCustomer(phone);
   if (!f.data) throw new Error('Không tìm thấy khách hàng');
   const bal = Number(f.data[K.balance]) || 0;
   const next = bal + delta;
   if (next < 0) throw new Error('Số dư ví không đủ');
   f.sh.getRange(f.row, K.balance + 1).setValue(next);
+  logLedger(phone, kind || 'Khác', delta, bal, next, ref);
   return next;
+}
+
+// Sổ cái ví: mọi biến động số dư đều ghi 1 dòng (thời gian, trước, sau, mã đơn/lý do) để tra cứu và đối soát
+function logLedger(phone, kind, delta, before, after, ref) {
+  try {
+    sheetOf(SH.ledger).appendRow([now(), textCell(normPhone(phone)), kind, delta, before, after, ref ? textCell(String(ref)) : '']);
+  } catch (err) { console.error('logLedger: ' + err); }
 }
 
 function checkPassword(pw) {
@@ -459,12 +471,12 @@ function createOrder(b) {
       throw new Error('Số dư ví (' + fmt(c.balance) + ') không đủ. Vui lòng nạp thêm ít nhất ' + fmt(p.price - c.balance) + '.');
     }
     if (!takeQty(p.id)) throw new Error('Sản phẩm này vừa hết hàng, vui lòng chọn sản phẩm khác hoặc nhắn Zalo shop.');
-    const newBalance = changeBalance(c.phone, -p.price);
-    bumpOrderCount(c.phone);
     const sh = SpreadsheetApp.getActive().getSheetByName(SH.orders.name);
     const code = genCode(sh, PREFIX);
+    const newBalance = changeBalance(c.phone, -p.price, 'Mua hàng', code);
+    bumpOrderCount(c.phone);
     const token = newToken().slice(0, 24);
-    const item = takeStock(p.id, code);
+    const item = p.deliver || takeStock(p.id, code);
     const status = item ? ST.DONE : ST.PAID;
     sh.appendRow([code, token, now(), p.id, p.name, p.price, textCell(c.phone), extra, status, item || '', now(), 'Ví', c.name, c.email]);
     if (item) {
@@ -526,7 +538,7 @@ function markDepositPaid(sh, row, r, bankRef, actualAmount) {
   sh.getRange(row, D.status + 1).setValue(DS.DONE);
   const requested = Number(r[D.amount]);
   const credit = Math.max(requested, Number(actualAmount) || 0);
-  const newBalance = changeBalance(r[D.phone], credit);
+  const newBalance = changeBalance(r[D.phone], credit, 'Nạp ví', r[D.code] + (bankRef ? ' · GD ' + bankRef : ''));
   const extra = credit > requested ? ' (khách chuyển dư ' + fmt(credit - requested) + ', đã cộng đủ)' : '';
   notifyOwner('✅ Nạp ví ' + r[D.code] + ' — cộng ' + fmt(credit) + extra + ' cho ' + r[D.phone] + '. Số dư mới: ' + fmt(newBalance));
   return newBalance;
@@ -833,10 +845,77 @@ function adminAdjustBalance(b) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    const newBalance = changeBalance(phone, delta);
+    const newBalance = changeBalance(phone, delta, delta > 0 ? 'Admin cộng' : 'Admin trừ', String(b.reason || '').slice(0, 200));
     notifyOwner('🛠️ Admin ' + (delta > 0 ? 'cộng' : 'trừ') + ' ' + fmt(Math.abs(delta)) + ' ví ' + phone + '. Số dư mới: ' + fmt(newBalance) + (b.reason ? '\nLý do: ' + b.reason : ''));
     return { ok: true, balance: newBalance };
   } finally { lock.releaseLock(); }
+}
+
+function adminCustomerLedger(b) {
+  requireRole(b.session, [ROLE.ADMIN, ROLE.STAFF]);
+  const phone = normPhone(b.phone);
+  const rows = sheetOf(SH.ledger).getDataRange().getValues().slice(1);
+  const list = rows.filter(r => normPhone(r[1]) === phone).slice(-40).reverse()
+    .map(r => ({ time: fmtDate(r[0]), kind: String(r[2]), delta: Number(r[3]) || 0, before: Number(r[4]) || 0, after: Number(r[5]) || 0, ref: String(r[6] || '') }));
+  return { entries: list };
+}
+
+// Đối soát: số dư hiện tại của từng khách phải khớp "Số dư sau" ở dòng sổ cái gần nhất. Lệch = số dư bị sửa ngoài hệ thống (vd sửa tay trong Sheet).
+// baseline=true: ghi số dư hiện tại của khách CHƯA có sổ cái làm số dư đầu kỳ, để từ đó bắt đầu theo dõi.
+function adminReconcile(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const last = {};
+    sheetOf(SH.ledger).getDataRange().getValues().slice(1).forEach(r => { last[normPhone(r[1])] = Number(r[5]) || 0; });
+    const mismatches = [], untracked = [];
+    let ok = 0;
+    sheetOf(SH.customers).getDataRange().getValues().slice(1).forEach(r => {
+      if (!r[K.phone]) return;
+      const phone = normPhone(r[K.phone]), bal = Number(r[K.balance]) || 0;
+      if (!(phone in last)) {
+        if (bal !== 0) {
+          if (b.baseline) logLedger(phone, 'Số dư đầu kỳ', bal, 0, bal, 'Ghi nhận mốc theo dõi');
+          else untracked.push({ phone, name: String(r[K.name]), balance: bal });
+        } else ok++;
+      } else if (last[phone] !== bal) mismatches.push({ phone, name: String(r[K.name]), balance: bal, ledger: last[phone], diff: bal - last[phone] });
+      else ok++;
+    });
+    return { ok, mismatches, untracked };
+  } finally { lock.releaseLock(); }
+}
+
+// Sao lưu: chép các tab dữ liệu quan trọng sang 1 file Sheet riêng, mỗi ngày 1 bản (tab tên yyyy-MM-dd_TênTab), giữ 14 ngày.
+// Chạy tự động mỗi đêm bằng trigger theo giờ (Apps Script → Kích hoạt), hoặc bấm "Sao lưu ngay" trong admin.
+const BACKUP_TABS = ['KhachHang', 'DonHang', 'NapTien', 'GiaoDich', 'SoCaiVi', 'SanPham', 'Kho'];
+function dailyBackup() {
+  const props = PropertiesService.getScriptProperties();
+  let bk = null;
+  const id = props.getProperty('BACKUP_SHEET_ID');
+  if (id) { try { bk = SpreadsheetApp.openById(id); } catch (err) { bk = null; } }
+  if (!bk) { bk = SpreadsheetApp.create('Trạm AI Việt — BACKUP tự động'); props.setProperty('BACKUP_SHEET_ID', bk.getId()); }
+  const ss = SpreadsheetApp.getActive();
+  const day = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  BACKUP_TABS.forEach(n => {
+    const src = ss.getSheetByName(n);
+    if (!src) return;
+    const name = day + '_' + n;
+    const old = bk.getSheetByName(name);
+    if (old) bk.deleteSheet(old);
+    src.copyTo(bk).setName(name);
+  });
+  const cutoff = Utilities.formatDate(new Date(Date.now() - 14 * 864e5), TZ, 'yyyy-MM-dd');
+  bk.getSheets().forEach(s => {
+    const m = s.getName().match(/^(\d{4}-\d{2}-\d{2})_/);
+    if (m && m[1] < cutoff && bk.getSheets().length > 1) bk.deleteSheet(s);
+  });
+  return bk.getUrl();
+}
+
+function adminBackupNow(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  return { url: dailyBackup() };
 }
 
 function adminListStaff(b) {
@@ -872,7 +951,7 @@ function adminListProducts(b) {
   const products = rows.filter(r => r[0]).map(r => ({
     id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0,
     warranty: r[5], need: r[6], visible: String(r[7]).toUpperCase() !== 'FALSE',
-    comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, optionsText: String(r[10] || ''), qty: qtyOf(r[11]),
+    comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, optionsText: String(r[10] || ''), qty: qtyOf(r[11]), deliver: String(r[12] || ''),
   }));
   return { products };
 }
@@ -903,12 +982,12 @@ function adminSaveProduct(b) {
     id, String(b.group || '').trim().slice(0, 60), name, String(b.duration || '-').trim().slice(0, 30), price,
     String(b.warranty || '').trim().slice(0, 100), String(b.need || '').trim().slice(0, 150),
     b.visible ? true : false, String(b.comboKey || '').trim().slice(0, 40), Math.max(0, Math.round(Number(b.comboCount)) || 0),
-    String(b.optionsText || '').trim().slice(0, 600), qty,
+    String(b.optionsText || '').trim().slice(0, 600), qty, String(b.deliver || '').trim().slice(0, 2000),
   ];
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    const sh = SpreadsheetApp.getActive().getSheetByName(SH.products.name);
+    const sh = sheetOf(SH.products);
     const data = sh.getDataRange().getValues();
     let foundRow = 0;
     for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === id) { foundRow = i + 1; break; } }

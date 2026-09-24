@@ -257,6 +257,11 @@ async function renderWalletTab() {
 function renderCustomerList() {
   $('#walletTab').innerHTML = `
     <button class="btn block" id="cExport" style="margin-bottom:10px">📤 Tải danh sách khách lên Google Sheet</button>
+    <div class="row2" style="margin-bottom:10px">
+      <button class="btn" id="cReconcile" style="flex:1">🧮 Đối soát ví</button>
+      <button class="btn" id="cBackup" style="flex:1">💾 Sao lưu ngay</button>
+    </div>
+    <div id="cReport"></div>
     <input id="cSearch" placeholder="🔍 Tìm theo tên hoặc số điện thoại" value="${esc(CUST_SEARCH)}">
     <div id="clist"></div>`;
   $('#cSearch').oninput = e => { CUST_SEARCH = e.target.value; renderCustomerItems(); };
@@ -269,7 +274,27 @@ function renderCustomerList() {
     } catch (err) { toast(err.message); }
     btn.disabled = false; btn.textContent = '📤 Tải danh sách khách lên Google Sheet';
   };
+  $('#cBackup').onclick = async () => {
+    const btn = $('#cBackup'); btn.disabled = true; btn.textContent = 'Đang sao lưu…';
+    try { const r = await apiPost({ action: 'adminBackupNow' }); toast('Đã sao lưu'); window.open(r.url, '_blank'); }
+    catch (err) { toast(err.message); }
+    btn.disabled = false; btn.textContent = '💾 Sao lưu ngay';
+  };
+  $('#cReconcile').onclick = () => runReconcile(false);
   renderCustomerItems();
+}
+async function runReconcile(baseline) {
+  const btn = $('#cReconcile'); btn.disabled = true;
+  try {
+    const r = await apiPost({ action: 'adminReconcile', baseline });
+    let h = `<div class="card"><b>Kết quả đối soát:</b> ${r.ok} khách khớp sổ cái`;
+    if (r.mismatches.length) h += `<div style="margin-top:8px;color:#fca5a5"><b>⚠️ ${r.mismatches.length} khách LỆCH:</b>` + r.mismatches.map(m => `<div>${esc(m.name)} · ${esc(m.phone)} — ví ${money(m.balance)}, sổ cái ${money(m.ledger)} (lệch ${money(m.diff)})</div>`).join('') + '</div>';
+    if (r.untracked.length) h += `<div style="margin-top:8px"><b>${r.untracked.length} khách có tiền nhưng chưa có sổ cái:</b>` + r.untracked.map(m => `<div>${esc(m.name)} · ${esc(m.phone)} — ${money(m.balance)}</div>`).join('') + '<button class="btn pri sm" id="cBaseline" style="margin-top:8px">Ghi nhận số dư hiện tại làm mốc</button></div>';
+    if (!r.mismatches.length && !r.untracked.length) h += ' ✅ Không có gì lệch.';
+    $('#cReport').innerHTML = h + '</div>';
+    const bb = $('#cBaseline'); if (bb) bb.onclick = () => runReconcile(true);
+  } catch (err) { toast(err.message); }
+  btn.disabled = false;
 }
 function renderCustomerItems() {
   const q = CUST_SEARCH.trim().toLowerCase();
@@ -291,6 +316,8 @@ function renderCustomerItems() {
         <label>Lý do (không bắt buộc, để lưu vết)</label>
         <input placeholder="Ví dụ: bù lỗi hệ thống" data-reason>
         <button class="btn pri sm" data-apply style="margin-top:8px;width:100%">Áp dụng vào ví</button>
+        <button class="btn sm block" data-ledger style="margin-top:10px">📒 Xem lịch sử ví</button>
+        <div data-ledgerbox></div>
         <div class="row2" style="margin-top:10px">
           <button class="btn sm" data-resetpw style="flex:1">🔑 Đặt lại mật khẩu</button>
           <button class="btn ${c.isBanned ? '' : 'bad'} sm" data-ban style="flex:1">${c.isBanned ? '✅ Mở khoá' : '🚫 Khoá tài khoản'}</button>
@@ -309,6 +336,16 @@ function renderCustomerItems() {
       const r = await apiPost({ action: 'adminAdjustBalance', phone, delta, reason: item.querySelector('[data-reason]').value });
       toast('Số dư mới: ' + money(r.balance)); renderWalletTab();
     } catch (err) { toast(err.message); b.disabled = false; }
+  });
+  el.querySelectorAll('[data-ledger]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const item = b.closest('.oitem'); const box = item.querySelector('[data-ledgerbox]');
+    b.disabled = true; box.innerHTML = '<div class="meta">Đang tải…</div>';
+    try {
+      const r = await apiPost({ action: 'adminCustomerLedger', phone: item.dataset.phone });
+      box.innerHTML = r.entries.length ? r.entries.map(x => `<div class="meta" style="border-top:1px solid var(--line);padding:6px 0">${esc(x.time)} · <b>${esc(x.kind)}</b> ${x.delta > 0 ? '+' : ''}${money(x.delta)} → số dư ${money(x.after)}${x.ref ? '<br>' + esc(x.ref) : ''}</div>`).join('') : '<div class="meta">Chưa có ghi nhận nào.</div>';
+    } catch (err) { box.innerHTML = `<div class="meta">${esc(err.message)}</div>`; }
+    b.disabled = false;
   });
   el.querySelectorAll('[data-resetpw]').forEach(b => b.onclick = async e => {
     e.stopPropagation();
@@ -383,7 +420,7 @@ function renderProducts() {
     ${PRODUCTS.map(p => `
       <div class="oitem">
         <div class="top">
-          <div><b>${esc(p.name)}</b> ${p.visible ? '' : '<span class="st-badge st-short">Đang ẩn</span>'} ${p.qty !== null && p.qty <= 0 ? '<span class="st-badge st-short">Hết hàng</span>' : ''}</div>
+          <div><b>${esc(p.name)}</b> ${p.visible ? '' : '<span class="st-badge st-short">Đang ẩn</span>'} ${p.qty !== null && p.qty <= 0 ? '<span class="st-badge st-short">Hết hàng</span>' : ''} ${p.deliver ? '<span class="st-badge st-done">🎁 Tự giao link</span>' : ''}</div>
           <b>${money(p.price)}</b>
         </div>
         <div class="meta">ID: <code>${esc(p.id)}</code> · ${esc(p.group)} · ${esc(p.duration)} · Số lượng còn: ${p.qty === null ? 'không giới hạn' : p.qty}</div>
@@ -407,6 +444,8 @@ function showProductForm(p) {
         <label>Giá (đ) — 0 = Liên hệ, có thể gõ tắt vd 149k hoặc 1.5tr</label><input name="price" required value="${p.price}">
         <label>Số lượng còn (sản phẩm có giá thì để 10, sản phẩm Liên hệ để 1 — bán hết sẽ tự báo Hết hàng)</label>
         <input name="qty" required inputmode="numeric" value="${p.qty === null || p.qty === undefined ? 10 : p.qty}">
+        <label>🎁 Nội dung TỰ GIAO ngay khi khách mua xong (vd: link khoá học, link tải, hướng dẫn). Để trống nếu giao từ Kho hoặc giao tay.</label>
+        <textarea name="deliver" rows="4" placeholder="vd: Link học: https://... &#10;Mật khẩu vào học: 1234">${esc(p.deliver || '')}</textarea>
         <label>Bảo hành</label><input name="warranty" value="${esc(p.warranty)}">
         <label>Khách cần gửi thêm (để trống nếu không cần)</label><input name="need" value="${esc(p.need)}" placeholder="vd: Gmail nhận tài khoản">
         <label>Danh sách lựa chọn cho khách bấm (cách nhau dấu phẩy, để trống = khách gõ tay)</label>
@@ -431,7 +470,7 @@ function showProductForm(p) {
       await apiPost({
         action: 'adminSaveProduct', id: fd.get('id'), name: fd.get('name'), group: fd.get('group'),
         duration: fd.get('duration'), price: fd.get('price'), qty: Number(fd.get('qty')), warranty: fd.get('warranty'),
-        need: fd.get('need'), optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
+        need: fd.get('need'), deliver: fd.get('deliver'), optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
         comboCount: Number(fd.get('comboCount')), visible: fd.get('visible') === 'on',
       });
       toast('Đã lưu sản phẩm'); loadProducts();

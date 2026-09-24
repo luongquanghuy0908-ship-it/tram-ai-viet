@@ -666,7 +666,7 @@ function showDone(o) {
       <h2 style="padding:0">Giao hàng thành công</h2>
       <p class="sub">Đơn <b>${esc(o.code)}</b> · ${esc(o.product)}</p>
     </div>
-    <div class="deliver">${esc(o.content)}</div>
+    <div class="deliver">${esc(o.content).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--brand2);text-decoration:underline">$1</a>')}</div>
     <button class="btn pri block" data-copy="${esc(o.content)}">Sao chép thông tin</button>
     <div class="note">Lưu lại thông tin này. Đơn luôn xem lại được ở "Đơn của tôi" trên máy này. Cần bảo hành, nhắn Zalo kèm mã đơn.</div>
     <a class="btn block" style="margin-top:10px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo shop</a>`);
