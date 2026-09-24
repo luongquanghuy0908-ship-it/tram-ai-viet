@@ -425,7 +425,7 @@ function renderProducts() {
           <div><b>${esc(p.name)}</b> ${p.visible ? '' : '<span class="st-badge st-short">Đang ẩn</span>'} ${p.qty !== null && p.qty <= 0 ? '<span class="st-badge st-short">Hết hàng</span>' : ''} ${p.deliver ? '<span class="st-badge st-done">🎁 Tự giao link</span>' : ''}</div>
           <b>${money(p.price)}</b>
         </div>
-        <div class="meta">ID: <code>${esc(p.id)}</code> · ${esc(p.group)} · ${esc(p.duration)} · Số lượng còn: ${p.qty === null ? 'không giới hạn' : p.qty}</div>
+        <div class="meta">ID: <code>${esc(p.id)}</code> · ${esc(p.group)} · ${esc(p.duration)} · Số lượng còn: ${p.qty === null ? 'không giới hạn' : p.qty} · Đã bán: ${p.sold || 0}</div>
         <div class="row2"><button class="btn sm" data-edit="${esc(p.id)}" style="flex:1">Sửa</button></div>
       </div>`).join('') || '<div class="card"><div class="empty">Chưa có sản phẩm nào.</div></div>'}`;
   $('#pAdd').onclick = () => showProductForm(null);
@@ -450,6 +450,8 @@ function showProductForm(p) {
         <textarea name="deliver" rows="4" placeholder="vd: Link học: https://... &#10;Mật khẩu vào học: 1234">${esc(p.deliver || '')}</textarea>
         <label>📖 Hướng dẫn sử dụng (tự gửi kèm khi giao hàng: hiện cho khách và gửi vào Gmail của họ). Để trống nếu không cần.</label>
         <textarea name="guide" rows="5" placeholder="vd: Bước 1: Đăng nhập tại ...&#10;Bước 2: ...&#10;Lưu ý: không đổi mật khẩu">${esc(p.guide || '')}</textarea>
+        <label>🔥 Đã bán — tự tăng mỗi đơn thật. Nếu trước đây bạn đã bán món này ở nhóm Zalo, nhập đúng số đã bán thật vào đây.</label>
+        <input name="sold" inputmode="numeric" value="${p.sold || 0}">
         <label>Bảo hành</label><input name="warranty" value="${esc(p.warranty)}">
         <label>Khách cần gửi thêm (để trống nếu không cần)</label><input name="need" value="${esc(p.need)}" placeholder="vd: Gmail nhận tài khoản">
         <label>Danh sách lựa chọn cho khách bấm (cách nhau dấu phẩy, để trống = khách gõ tay)</label>
@@ -474,7 +476,7 @@ function showProductForm(p) {
       await apiPost({
         action: 'adminSaveProduct', id: fd.get('id'), name: fd.get('name'), group: fd.get('group'),
         duration: fd.get('duration'), price: fd.get('price'), qty: Number(fd.get('qty')), warranty: fd.get('warranty'),
-        need: fd.get('need'), deliver: fd.get('deliver'), guide: fd.get('guide'), optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
+        need: fd.get('need'), deliver: fd.get('deliver'), guide: fd.get('guide'), sold: Number(fd.get('sold')) || 0, optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
         comboCount: Number(fd.get('comboCount')), visible: fd.get('visible') === 'on',
       });
       toast('Đã lưu sản phẩm'); loadProducts();

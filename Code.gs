@@ -8,7 +8,7 @@ const MIN_TOPUP = 10000;
 const MAX_TOPUP = 20000000;
 
 const SH = {
-  products: { name: 'SanPham', header: ['ID', 'Nhóm', 'Tên sản phẩm', 'Thời hạn', 'Giá (đ) — 0 = Liên hệ', 'Bảo hành', 'Khách cần gửi thêm', 'Hiện trên web (TRUE/FALSE)', 'Mã combo (nhiều dòng cùng mã này gộp thành 1 thẻ chọn gói, để trống nếu bán riêng)', 'Số Gmail cần nhập (chỉ cho sản phẩm combo)', 'Danh sách lựa chọn (cách nhau bởi dấu phẩy — để trống thì khách tự gõ tay)', 'Số lượng còn (0 = hết hàng, sản phẩm Liên hệ để 1)', 'Nội dung tự giao ngay khi mua (link khoá học, hướng dẫn... — để trống nếu giao từ Kho hoặc giao tay)', 'Hướng dẫn sử dụng (gửi kèm khi giao hàng)'] },
+  products: { name: 'SanPham', header: ['ID', 'Nhóm', 'Tên sản phẩm', 'Thời hạn', 'Giá (đ) — 0 = Liên hệ', 'Bảo hành', 'Khách cần gửi thêm', 'Hiện trên web (TRUE/FALSE)', 'Mã combo (nhiều dòng cùng mã này gộp thành 1 thẻ chọn gói, để trống nếu bán riêng)', 'Số Gmail cần nhập (chỉ cho sản phẩm combo)', 'Danh sách lựa chọn (cách nhau bởi dấu phẩy — để trống thì khách tự gõ tay)', 'Số lượng còn (0 = hết hàng, sản phẩm Liên hệ để 1)', 'Nội dung tự giao ngay khi mua (link khoá học, hướng dẫn... — để trống nếu giao từ Kho hoặc giao tay)', 'Hướng dẫn sử dụng (gửi kèm khi giao hàng)', 'Đã bán (tự tăng mỗi đơn; nhập số đã bán thật trước đây nếu có)'] },
   ledger: { name: 'SoCaiVi', header: ['Thời gian', 'SĐT', 'Loại', 'Số tiền (+/-)', 'Số dư trước', 'Số dư sau', 'Mã đơn / ghi chú'] },
   stock: { name: 'Kho', header: ['ID sản phẩm', 'Nội dung giao cho khách (acc | mk | hướng dẫn)', 'Mã đơn đã giao', 'Ngày giao'] },
   orders: { name: 'DonHang', header: ['Mã đơn', 'Token', 'Thời gian đặt', 'ID sản phẩm', 'Tên sản phẩm', 'Số tiền', 'Zalo/SĐT khách', 'Khách gửi thêm', 'Trạng thái', 'Nội dung giao cho khách', 'Thời gian nhận tiền', 'Mã GD ngân hàng', 'Họ tên', 'Gmail'] },
@@ -208,7 +208,7 @@ function listProducts() {
   });
   const products = ss.getSheetByName(SH.products.name).getDataRange().getValues().slice(1)
     .filter(r => r[0] && r[7] !== false && String(r[7]).toUpperCase() !== 'FALSE')
-    .map(r => ({ id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0, warranty: r[5], need: r[6], stock: stockCount[r[0]] || 0, comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean), qty: qtyOf(r[11]), guide: String(r[13] || '').trim() }));
+    .map(r => ({ id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0, warranty: r[5], need: r[6], stock: stockCount[r[0]] || 0, comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, options: String(r[10] || '').split(',').map(s => s.trim()).filter(Boolean), qty: qtyOf(r[11]), guide: String(r[13] || '').trim(), sold: Number(r[14]) || 0 }));
   return { shop: SHOP, bank: BANK, products };
 }
 
@@ -231,6 +231,13 @@ function takeQty(id) {
   if (q <= 0) return false;
   f.sh.getRange(f.row, 12).setValue(q - 1);
   return true;
+}
+
+// Mỗi đơn thật thành công tự cộng 1 vào "Đã bán"
+function addSold(id) {
+  const f = findProductRow(id);
+  if (!f.data) return;
+  f.sh.getRange(f.row, 15).setValue((Number(f.data[14]) || 0) + 1);
 }
 
 function findProduct(id) {
@@ -520,6 +527,7 @@ function createOrder(b) {
     const sh = SpreadsheetApp.getActive().getSheetByName(SH.orders.name);
     const code = genCode(sh, PREFIX);
     const newBalance = changeBalance(c.phone, -p.price, 'Mua hàng', code);
+    addSold(p.id);
     bumpOrderCount(c.phone);
     const token = newToken().slice(0, 24);
     const base = p.deliver || takeStock(p.id, code);
@@ -1010,7 +1018,7 @@ function adminListProducts(b) {
   const products = rows.filter(r => r[0]).map(r => ({
     id: String(r[0]), group: r[1], name: r[2], duration: r[3], price: Number(r[4]) || 0,
     warranty: r[5], need: r[6], visible: String(r[7]).toUpperCase() !== 'FALSE',
-    comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, optionsText: String(r[10] || ''), qty: qtyOf(r[11]), deliver: String(r[12] || ''), guide: String(r[13] || ''),
+    comboKey: String(r[8] || ''), comboCount: Number(r[9]) || 0, optionsText: String(r[10] || ''), qty: qtyOf(r[11]), deliver: String(r[12] || ''), guide: String(r[13] || ''), sold: Number(r[14]) || 0,
   }));
   return { products };
 }
@@ -1041,7 +1049,7 @@ function adminSaveProduct(b) {
     id, String(b.group || '').trim().slice(0, 60), name, String(b.duration || '-').trim().slice(0, 30), price,
     String(b.warranty || '').trim().slice(0, 100), String(b.need || '').trim().slice(0, 150),
     b.visible ? true : false, String(b.comboKey || '').trim().slice(0, 40), Math.max(0, Math.round(Number(b.comboCount)) || 0),
-    String(b.optionsText || '').trim().slice(0, 600), qty, String(b.deliver || '').trim().slice(0, 2000), String(b.guide || '').trim().slice(0, 4000),
+    String(b.optionsText || '').trim().slice(0, 600), qty, String(b.deliver || '').trim().slice(0, 2000), String(b.guide || '').trim().slice(0, 4000), Math.max(0, Math.round(Number(b.sold)) || 0),
   ];
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);

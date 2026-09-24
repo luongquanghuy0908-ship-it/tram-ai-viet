@@ -90,6 +90,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-f
 .tag{font-size:12px;padding:3px 8px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);color:var(--muted)}
 .tag.g{color:#86efac;border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
 .tag.y{color:#fcd34d;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.tag.o{background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.45);color:#fdba74}
 .tag.r{color:#fca5a5;border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08)}
 .price{font-size:22px;font-weight:800;margin-top:auto}
 .price small{font-size:13px;color:var(--muted);font-weight:500}
@@ -643,7 +644,7 @@ function comboCard(c) {
   const def = allOut ? 0 : firstOk;
   return `<div class="card">
     <h3>${esc(c.name)}</h3>
-    <div class="meta"><span class="tag">Chọn gói bên dưới</span></div>
+    <div class="meta"><span class="tag">Chọn gói bên dưới</span>${soldTag(tiers.reduce((n, t) => n + (t.sold || 0), 0))}</div>
     <div class="tiers" data-combo="${esc(c.key)}">${tiers.map((t, i) => `<label class="tier ${i === def ? 'on' : ''} ${soldOut(t) ? 'off' : ''}">
       <input type="radio" name="combo-${esc(c.key)}" value="${esc(t.id)}" ${i === def ? 'checked' : ''} ${soldOut(t) ? 'disabled' : ''}>
       <span>${esc(t.duration)}${soldOut(t) ? ' · Hết hàng' : (t.qty !== null && t.qty !== undefined ? ' · còn ' + t.qty : '')}</span><b>${t.price > 0 ? money(t.price) : 'Liên hệ'}</b>
@@ -651,6 +652,8 @@ function comboCard(c) {
     ${allOut ? '<button class="btn block" disabled>Hết hàng</button>' : `<button class="btn pri block" data-buy="${esc(tiers[def].id)}" data-combo-btn>Mua ngay</button>`}
   </div>`;
 }
+function fmtSold(n) { return n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '').replace('.', ',') + 'k' : String(n); }
+function soldTag(n) { return n > 0 ? `<span class="tag o">🔥 Đã bán ${fmtSold(n)}</span>` : ''; }
 function soldOut(p) { return p.qty !== null && p.qty !== undefined && p.qty <= 0; }
 function card(p) {
   if (p.combo) return comboCard(p);
@@ -663,7 +666,7 @@ function card(p) {
     : `<a class="btn block" href="${ZALO}" target="_blank" rel="noopener">Liên hệ Zalo</a>`;
   return `<div class="card">
     <h3>${esc(p.name)}</h3>
-    <div class="meta">${p.duration && p.duration !== '-' ? `<span class="tag">⏱ ${esc(p.duration)}</span>` : ''}${p.warranty ? `<span class="tag">🛡 ${esc(p.warranty)}</span>` : ''}${qtyTag}${stock}</div>
+    <div class="meta">${p.duration && p.duration !== '-' ? `<span class="tag">⏱ ${esc(p.duration)}</span>` : ''}${p.warranty ? `<span class="tag">🛡 ${esc(p.warranty)}</span>` : ''}${soldTag(p.sold)}${qtyTag}${stock}</div>
     <div class="price">${p.price > 0 ? money(p.price) : 'Liên hệ'}</div>
     ${act}
   </div>`;
