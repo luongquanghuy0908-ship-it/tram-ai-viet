@@ -45,6 +45,21 @@ header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-f
 .policy-box p{color:var(--muted);font-size:14px;line-height:1.5}
 .policy-box .read{margin-top:8px;font-weight:700}
 .policy-box .read a{color:var(--brand2);text-decoration:underline;cursor:pointer}
+.notices{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 22px}
+@media(max-width:700px){.notices{grid-template-columns:1fr}}
+.notice{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 16px}
+.notice .nh{font-weight:800;font-size:19px;margin-bottom:8px}
+.notice.ban{border-color:rgba(239,68,68,.5)}
+.notice.ban .nh{color:#f87171}
+.notice.save{border-color:rgba(109,93,252,.55)}
+.notice.save .nh{color:#a5b4fc}
+.notice p{font-size:14px;line-height:1.5;color:var(--muted)}
+.notice p b{color:var(--text)}
+.notice ul{list-style:none;margin:10px 0;display:grid;gap:6px}
+.notice li{font-size:14px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.warnbox{margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fecaca;font-size:14px;line-height:1.5}
+.warnbox b{color:#fff}
+.notice .thanks{margin-top:10px;font-size:13px}
 .policy h3{font-size:15px;margin:16px 0 6px}
 .policy p,.policy li{font-size:13.5px;line-height:1.55;color:var(--muted)}
 .policy ul{margin:4px 0 8px 18px}
@@ -165,6 +180,31 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
     <h3>Chính sách bảo hành - lưu ý khi mua</h3>
     <p>Tất cả sản phẩm được bảo hành theo chế độ bảo hành ghi ở đầu trang và ghi chú dưới tên sản phẩm. Vui lòng đọc kỹ trước khi bấm mua hàng.</p>
     <p class="read"><span style="color:#f87171">Đọc chính sách:</span> <a id="btnPolicy">Tại đây !</a></p>
+  </section>
+
+  <section class="notices">
+    <div class="notice ban">
+      <div class="nh">⚠️ NGHIÊM CẤM</div>
+      <p><b>Nghiêm cấm sử dụng các sản phẩm và dịch vụ tại Trạm AI Việt vào mục đích vi phạm pháp luật, chính trị, lừa đảo, đòi trục...</b></p>
+      <ul>
+        <li>⚖️ Vi phạm pháp luật</li>
+        <li>🏛️ Vi phạm chính trị</li>
+        <li>🕵️ Lừa đảo, chiếm đoạt tài sản</li>
+        <li>🚫 Quấy rối, đe doạ, xúc phạm người khác</li>
+      </ul>
+      <div class="warnbox">Nếu cố tình vi phạm sẽ bị <b>trừ hết số dư và khoá tài khoản vĩnh viễn</b>, đồng thời phải chịu trách nhiệm trước pháp luật.</div>
+    </div>
+    <div class="notice save">
+      <div class="nh">🔒 LƯU TRỮ THÔNG TIN TÀI KHOẢN</div>
+      <p><b>Sau khi nhận tài khoản, quý khách vui lòng chủ động lưu trữ:</b></p>
+      <ul>
+        <li>👤 Tên đăng nhập</li>
+        <li>🔑 Mật khẩu</li>
+        <li>🛡️ Thông tin khôi phục (nếu có)</li>
+      </ul>
+      <div class="warnbox">Nhằm đảm bảo an toàn và bảo mật thông tin khách hàng, <b>sau thời gian bảo hành shop không hỗ trợ cấp lại</b> thông tin đã giao.</div>
+      <p class="thanks">Vui lòng lưu trữ cẩn thận để tránh thất lạc. Xin cảm ơn quý khách đã đồng hành cùng Trạm AI Việt!</p>
+    </div>
   </section>
 
   <div class="cats" id="cats"></div>
