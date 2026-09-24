@@ -35,7 +35,19 @@ header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-f
 .logo{white-space:nowrap}
 @media(max-width:420px){.logo{font-size:16px}.logo i{width:30px;height:30px}.nav-r .btn{padding:8px 10px;font-size:13px}.user-chip{display:none}.perk{padding:10px 12px}.long{display:none}.nav{gap:8px}.nav-r{gap:6px}}
 @media(max-width:340px){.logo{font-size:0;gap:0}}
-.user-chip{font-size:13px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[hidden]{display:none!important}
+.btn.wallet{border-color:rgba(34,197,94,.5);color:#86efac}
+.btn.wallet b{color:#fff}
+@media(max-width:520px){.nav{height:auto;padding:8px 0;flex-wrap:wrap}.nav-r{width:100%;justify-content:flex-end;flex-wrap:wrap}}
+.policy-box{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:18px 16px;text-align:center;margin:8px 0 22px}
+.policy-box h3{color:#f87171;font-size:18px;margin-bottom:6px}
+.policy-box p{color:var(--muted);font-size:14px;line-height:1.5}
+.policy-box .read{margin-top:8px;font-weight:700}
+.policy-box .read a{color:var(--brand2);text-decoration:underline;cursor:pointer}
+.policy h3{font-size:15px;margin:16px 0 6px}
+.policy p,.policy li{font-size:13.5px;line-height:1.55;color:var(--muted)}
+.policy ul{margin:4px 0 8px 18px}
+.policy b{color:var(--text)}
 .hero{padding:40px 0 20px;text-align:center}
 .badge{display:inline-block;padding:6px 12px;border-radius:99px;background:rgba(109,93,252,.15);border:1px solid rgba(109,93,252,.4);color:#c4bdff;font-size:13px;font-weight:600}
 .hero h1{font-size:clamp(28px,5vw,44px);font-weight:800;margin:14px 0 10px;line-height:1.2}
@@ -126,7 +138,8 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
   <div class="wrap nav">
     <a class="logo" href="./"><i>⚡</i>Trạm AI Việt</a>
     <div class="nav-r">
-      <span class="user-chip" id="userChip"></span>
+      <button class="btn wallet" id="btnWallet" hidden title="Số dư ví">💰 <b id="walBal"></b></button>
+      <button class="btn pri" id="btnTopupTop" hidden>＋ Nạp<span class="long"> tiền</span></button>
       <button class="btn" id="btnGuide"><span class="long">Hướng dẫn </span>mua hàng</button>
       <button class="btn" id="btnOrders">Đơn<span class="long"> của tôi</span></button>
       <button class="btn pri" id="btnLogin">Đăng nhập</button>
@@ -144,6 +157,12 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
       <div class="perk"><b>🛡️ Bảo hành rõ ràng</b><small>BHF = bảo hành full thời hạn</small></div>
       <div class="perk"><b>🎁 Tặng tool video AI</b><small><a href="https://luongquanghuy0908-ship-it.github.io/qua-tang-ai/" target="_blank" rel="noopener">Nhận tool miễn phí →</a></small></div>
     </div>
+  </section>
+
+  <section class="policy-box">
+    <h3>Chính sách bảo hành - lưu ý khi mua</h3>
+    <p>Tất cả sản phẩm được bảo hành theo chế độ bảo hành ghi ở đầu trang và ghi chú dưới tên sản phẩm. Vui lòng đọc kỹ trước khi bấm mua hàng.</p>
+    <p class="read"><span style="color:#f87171">Đọc chính sách:</span> <a id="btnPolicy">Tại đây !</a></p>
   </section>
 
   <div class="cats" id="cats"></div>
@@ -240,7 +259,9 @@ function isSessionError(err) { return /đăng nhập lại/.test(err.message); }
 function renderUser() {
   const u = user();
   const s = getSession();
-  $('#userChip').textContent = u ? '👤 ' + u.name + ' · ' + money(u.balance || 0) : '';
+  $('#btnWallet').hidden = !u;
+  $('#btnTopupTop').hidden = !u;
+  if (u) $('#walBal').textContent = money(u.balance || 0);
   $('#btnLogin').textContent = u ? 'Tài khoản' : 'Đăng nhập';
   const isStaff = s && (s.customer.role === 'admin' || s.customer.role === 'staff');
   let adminBtn = $('#btnAdmin');
@@ -456,6 +477,76 @@ function showGuide() {
     <a class="btn pri block" style="margin-top:12px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo shop</a>`);
 }
 $('#btnGuide').onclick = showGuide;
+$('#btnWallet').onclick = () => showTopup(null);
+$('#btnTopupTop').onclick = () => showTopup(null);
+
+function showPolicy() {
+  openModal(`
+    <h2>Chính sách bảo hành & xử lý sản phẩm</h2>
+    <p class="sub">Áp dụng tại Trạm AI Việt</p>
+    <div class="policy">
+      <h3>1. Quy định chung</h3>
+      <p>Khi mua hàng tại Trạm AI Việt, khách hàng được hiểu là đã đọc, hiểu và đồng ý với toàn bộ chính sách bảo hành, xử lý sản phẩm và các điều khoản liên quan được công khai trên hệ thống.</p>
+      <p>Tất cả sản phẩm tại Trạm AI Việt là sản phẩm số / dịch vụ số, vì vậy chính sách bảo hành áp dụng theo đúng mô tả cụ thể của từng sản phẩm được niêm yết trên website.</p>
+      <p>Trạm AI Việt có quyền cập nhật chính sách để phù hợp với hoạt động vận hành và quy định của nền tảng theo từng thời điểm.</p>
+
+      <h3>2. Thời gian bảo hành</h3>
+      <p>Mỗi sản phẩm có thời gian bảo hành riêng, ghi rõ ở phần "Bảo hành" dưới tên sản phẩm. Thời gian bảo hành tính từ thời điểm đơn hàng hoàn tất. Ví dụ: bảo hành 24h, 7 ngày, 30 ngày, hoặc bảo hành theo thời hạn sử dụng gói.</p>
+      <p>Sau khi hết thời gian bảo hành, Trạm AI Việt có quyền từ chối xử lý các yêu cầu không còn đáp ứng điều kiện bảo hành theo chính sách hiện hành.</p>
+
+      <h3>3. Bảo hành theo trạng thái chưa sử dụng</h3>
+      <p>Một số sản phẩm chỉ bảo hành khi tài khoản chưa được đăng nhập hoặc chưa phát sinh sử dụng, với các ghi chú như "Bảo hành khi chưa login", "Check live", "Bao test" hoặc nội dung tương tự. Với các sản phẩm này, thời gian bảo hành chỉ áp dụng trước khi tài khoản được đăng nhập hoặc sử dụng lần đầu.</p>
+      <p>Sau khi đã đăng nhập thành công hoặc hết thời gian bảo hành trước khi login, Trạm AI Việt có quyền từ chối bảo hành các lỗi phát sinh trong quá trình sử dụng, bao gồm nhưng không giới hạn: thay đổi thông tin, vi phạm chính sách nền tảng, đăng nhập sai cách hoặc các nguyên nhân từ phía người dùng.</p>
+
+      <h3>4. Điều kiện được bảo hành</h3>
+      <p><b>✅ Tài khoản lỗi ngay khi nhận:</b></p>
+      <ul><li>Sai tài khoản, sai thông tin đăng nhập, không đăng nhập được</li><li>Sai mô tả sản phẩm, không đúng loại dịch vụ đã mua</li></ul>
+      <p><b>✅ Dịch vụ lỗi từ phía hệ thống:</b></p>
+      <ul><li>Gói dịch vụ không hoạt động</li><li>Thiếu quyền tính năng như mô tả</li><li>Không đúng thời lượng cam kết</li></ul>
+      <p><b>✅ Lỗi phát sinh từ nguồn cung cấp:</b> tài khoản bị thu hồi, mất quyền truy cập hoặc gặp lỗi trong thời gian bảo hành mà nguyên nhân không xuất phát từ phía khách hàng.</p>
+
+      <h3>5. Xác nhận hoàn tất bàn giao sản phẩm</h3>
+      <p>Sản phẩm được xem là bàn giao thành công khi: đúng thông tin đăng nhập; đúng loại sản phẩm/dịch vụ; đúng mô tả công khai tại trang sản phẩm; có thể truy cập hoặc sử dụng tại thời điểm bàn giao.</p>
+      <p>Sau khi khách hàng đăng nhập thành công hoặc sử dụng sản phẩm, Trạm AI Việt mặc định xem như trách nhiệm bàn giao ban đầu đã hoàn tất. Các vấn đề phát sinh do thiếu kiến thức sử dụng, mua về nhưng không dùng, dùng sai hướng dẫn, nhu cầu cá nhân không phù hợp, thiết bị không tương thích hoặc thay đổi từ nền tảng bên thứ ba <b>không được xem là lỗi sản phẩm</b>.</p>
+
+      <h3>6. Giới hạn tính năng từ nền tảng bên thứ ba</h3>
+      <p>Một số tính năng có thể bị ảnh hưởng bởi khu vực sử dụng, thiết bị, chính sách nền tảng, thời điểm phát hành tính năng, hệ thống phân phối của nền tảng gốc hoặc các thay đổi ngoài phạm vi kiểm soát. Trạm AI Việt không cam kết mọi tài khoản có đầy đủ 100% tính năng tại mọi thời điểm nếu nền tảng gốc thay đổi chính sách hoặc hệ thống vận hành.</p>
+      <p>Thay đổi giao diện, giới hạn tính năng, verify, checkpoint, yêu cầu xác minh, thay đổi quyền truy cập từ phía nền tảng không được xem là lỗi sản phẩm nếu nằm ngoài phạm vi cam kết bảo hành.</p>
+
+      <h3>7. Các trường hợp từ chối bảo hành</h3>
+      <ul>
+        <li><b>❌ Hết thời gian bảo hành</b> theo thời hạn đã công bố.</li>
+        <li><b>❌ Khách hàng thay đổi thông tin tài khoản:</b> đổi email, đổi mật khẩu, đổi recovery, thêm số điện thoại, bật/tắt bảo mật, đồng bộ nhiều thiết bị hoặc chia sẻ nhiều IP bất thường.</li>
+        <li><b>❌ Sử dụng sai cách dẫn tới khoá tài khoản:</b> vi phạm chính sách nền tảng, đăng nhập bất thường, dùng quá nhiều thiết bị, thao tác gây nghi ngờ từ hệ thống nền tảng.</li>
+        <li><b>❌ Tài khoản bị verify/checkpoint từ hành vi người dùng.</b> Trạm AI Việt không chịu trách nhiệm đối với các xác minh phát sinh từ quá trình sử dụng của khách hàng.</li>
+        <li><b>❌ Không cung cấp đủ bằng chứng.</b> Khách cần gửi: mã đơn hàng, video/ảnh lỗi, mô tả tình trạng cụ thể.</li>
+        <li><b>❌ Tài khoản đã sử dụng trong thời gian dài</b> (ví dụ gói 30 ngày đã dùng ổn định phần lớn thời gian rồi mới phát sinh lỗi) không được xem là lỗi ngay từ đầu của sản phẩm.</li>
+        <li><b>❌ Không biết sử dụng hoặc sử dụng không đúng cách:</b> dùng sai hướng dẫn, thao tác sai quy trình, hoặc kỳ vọng ngoài phạm vi mô tả sản phẩm.</li>
+      </ul>
+
+      <h3>8. Quy định xử lý bảo hành</h3>
+      <p>Tuỳ từng trường hợp, Trạm AI Việt có thể áp dụng: đổi tài khoản tương đương; gia hạn thời gian sử dụng; bù sản phẩm tương đương; hoàn tiền một phần; hoặc hoàn tiền toàn bộ nếu không có phương án thay thế phù hợp. Trạm AI Việt có quyền chọn phương án phù hợp theo tình trạng sản phẩm và mức độ lỗi thực tế.</p>
+
+      <h3>9. Quy định hoàn tiền</h3>
+      <p>Không hỗ trợ hoàn tiền khi: sản phẩm hoạt động đúng mô tả; khách không muốn dùng tiếp; mua nhầm sản phẩm; không biết sử dụng; lỗi phát sinh từ phía người dùng; lỗi do thay đổi chính sách của nền tảng bên thứ ba.</p>
+      <p>Chỉ hỗ trợ hoàn tiền khi: không thể thay thế sản phẩm lỗi; không thể khắc phục trong thời gian hợp lý; hoặc lỗi nghiêm trọng xuất phát trực tiếp từ phía hệ thống.</p>
+
+      <h3>10. Quy định hỗ trợ kỹ thuật</h3>
+      <p>Trạm AI Việt hỗ trợ hướng dẫn sử dụng trong phạm vi khả năng và thời gian cho phép; đây là hỗ trợ thiện chí, không phải nghĩa vụ bắt buộc đi kèm mọi sản phẩm. Không chịu trách nhiệm với lỗi do thao tác của khách, dùng sai hướng dẫn, thay đổi từ nền tảng bên thứ ba hoặc thiệt hại gián tiếp trong quá trình sử dụng.</p>
+      <p>Hỗ trợ trong giờ làm việc của hệ thống. Các yêu cầu spam, thiếu thông tin hoặc có hành vi không phù hợp có thể bị từ chối xử lý.</p>
+
+      <h3>11. Giới hạn trách nhiệm</h3>
+      <p>Trong mọi trường hợp, trách nhiệm tối đa của Trạm AI Việt với mỗi đơn hàng không vượt quá giá trị khách đã thanh toán cho sản phẩm đó. Không chịu trách nhiệm với thiệt hại gián tiếp, mất dữ liệu, gián đoạn công việc, mất doanh thu hoặc các tổn thất ngoài phạm vi giá trị sản phẩm.</p>
+
+      <h3>12. Quy định chống lạm dụng bảo hành</h3>
+      <p>Trạm AI Việt có quyền từ chối hỗ trợ khi có dấu hiệu trục lợi bảo hành, cố tình gây lỗi để đổi sản phẩm, dùng nhiều IP/thiết bị bất thường, spam hỗ trợ, xúc phạm, đe doạ hoặc gây ảnh hưởng tới hoạt động hệ thống. Hệ thống có quyền tạm ngưng hoặc khoá vĩnh viễn tài khoản mua hàng nếu phát hiện gian lận.</p>
+
+      <h3>13. Xử lý tranh chấp</h3>
+      <p>Mọi tranh chấp được ưu tiên giải quyết bằng thương lượng và đối thoại. Khách hàng có trách nhiệm cung cấp đầy đủ bằng chứng liên quan trước khi yêu cầu xử lý. Trạm AI Việt có quyền tạm ngưng hỗ trợ với các trường hợp xúc phạm, đe doạ, spam hoặc cố tình gây ảnh hưởng tới hoạt động hỗ trợ.</p>
+    </div>
+    <a class="btn pri block" style="margin-top:14px" href="${ZALO}" target="_blank" rel="noopener">Nhắn Zalo shop để được hỗ trợ</a>`);
+}
+$('#btnPolicy').onclick = showPolicy;
 
 async function checkSession() {
   const s = getSession();
