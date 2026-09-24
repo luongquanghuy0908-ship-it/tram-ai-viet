@@ -119,17 +119,24 @@ async function fetchJson(url, opt = {}, ms = 20000) {
   try {
     const r = await fetch(url, { ...opt, signal: ac.signal });
     const j = await r.json();
-    if (j.error) throw new Error(j.error);
+    if (j.error) { const e = new Error(j.error); e.server = true; throw e; }
+    if (j && j.ok === true && j.shop && Object.keys(j).length <= 2) { const e = new Error('Phản hồi tạm thời không hợp lệ'); e.transient = true; throw e; }
     return j;
-  } catch (e) { if (e.message && e.message !== 'Failed to fetch') throw e; throw new Error('Mạng chậm, vui lòng thử lại'); }
+  } catch (e) { if (e.server) throw e; if (e.transient) throw e; throw Object.assign(new Error('Mạng chậm, vui lòng thử lại'), { transient: true }); }
   finally { clearTimeout(t); }
 }
 async function apiPost(body) {
-  try {
-    return await fetchJson(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...body, session: body.session || (SESSION && SESSION.token) }) }, 30000);
-  } catch (err) {
-    if (/đăng nhập lại|quyền truy cập/.test(err.message)) { clearSavedSession(); location.reload(); }
-    throw err;
+  // reqId giống nhau qua các lần thử → máy chủ không cộng/trừ ví 2 lần
+  const payload = { ...body, session: body.session || (SESSION && SESSION.token) };
+  if (body.action === 'adminAdjustBalance') payload.reqId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
+  for (let i = 1; ; i++) {
+    try {
+      return await fetchJson(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }, 30000);
+    } catch (err) {
+      if (/đăng nhập lại|quyền truy cập/.test(err.message)) { clearSavedSession(); location.reload(); }
+      if (err.server || i >= 4) throw err;
+      await new Promise(r => setTimeout(r, 700 * i));
+    }
   }
 }
 

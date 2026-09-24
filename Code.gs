@@ -169,19 +169,19 @@ function doPost(e) {
   try {
     if (e.parameter.key !== undefined) return json(handleSepay(e));
     const body = JSON.parse(e.postData.contents || '{}');
-    if (body.action === 'order') return json(createOrder(body));
+    if (body.action === 'order') return json(idem(body, () => createOrder(body)));
     if (body.action === 'register') return json(register(body));
     if (body.action === 'login') return json(login(body));
     if (body.action === 'me') return json({ customer: requireSession(body.session) });
     if (body.action === 'logout') return json(logout(body.session));
     if (body.action === 'myorders') return json(myOrders(body.session));
-    if (body.action === 'topup') return json(requestTopup(body));
+    if (body.action === 'topup') return json(idem(body, () => requestTopup(body)));
     if (body.action === 'forgotpassword') return json(forgotPassword(body));
     if (body.action === 'resetpassword') return json(resetPassword(body));
     if (body.action === 'adminOrders') return json(adminOrders(body));
     if (body.action === 'adminPendingOrders') return json(adminPendingOrders(body));
     if (body.action === 'adminUpdateOrder') return json(adminUpdateOrder(body));
-    if (body.action === 'adminAdjustBalance') return json(adminAdjustBalance(body));
+    if (body.action === 'adminAdjustBalance') return json(idem(body, () => adminAdjustBalance(body)));
     if (body.action === 'adminListCustomers') return json(adminListCustomers(body));
     if (body.action === 'adminExportCustomers') return json(adminExportCustomers(body));
     if (body.action === 'adminCustomerLedger') return json(adminCustomerLedger(body));
@@ -198,6 +198,26 @@ function doPost(e) {
     if (body.action === 'adminDeleteProduct') return json(adminDeleteProduct(body));
     return json({ error: 'Yêu cầu không hợp lệ' });
   } catch (err) { return json({ error: String(err.message || err) }); }
+}
+
+// Chống làm 2 lần: trang gửi kèm reqId; nếu gửi lại cùng reqId (do mạng/Google trả phản hồi lạ) thì trả lại kết quả lần đầu, KHÔNG trừ/cộng tiền lần nữa
+function idem(body, fn) {
+  const rid = String(body.reqId || '').slice(0, 64);
+  if (!rid) return fn();
+  const cache = CacheService.getScriptCache();
+  const k = 'rq_' + sha(rid + '|' + String(body.session || '')).slice(0, 40);
+  for (let i = 0; i < 40; i++) {
+    const done = cache.get(k + '_r');
+    if (done) return JSON.parse(done);
+    if (!cache.get(k + '_p')) break;
+    Utilities.sleep(500);
+  }
+  cache.put(k + '_p', '1', 60);
+  try {
+    const r = fn();
+    cache.put(k + '_r', JSON.stringify(r), 600);
+    return r;
+  } finally { cache.remove(k + '_p'); }
 }
 
 function listProducts() {
