@@ -60,6 +60,10 @@ header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-f
 .warnbox{margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fecaca;font-size:14px;line-height:1.5}
 .warnbox b{color:#fff}
 .notice .thanks{margin-top:10px;font-size:13px}
+.guide{margin:12px 0;padding:12px 14px;border-radius:12px;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.35);font-size:14px;line-height:1.55}
+.guide b{display:block;margin-bottom:4px;color:var(--brand2)}
+.guide div{white-space:pre-wrap;color:var(--text);max-height:220px;overflow-y:auto}
+.guide a{color:var(--brand2);text-decoration:underline}
 .policy h3{font-size:15px;margin:16px 0 6px}
 .policy p,.policy li{font-size:13.5px;line-height:1.55;color:var(--muted)}
 .policy ul{margin:4px 0 8px 18px}
@@ -696,6 +700,7 @@ function startBuy(id) {
     <p class="sub">${esc([p.duration !== '-' ? p.duration : '', p.warranty].filter(Boolean).join(' · '))}</p>
     <div class="sum"><span>Giá</span><b>${money(p.price)}</b></div>
     <div class="row"><span>Số dư ví hiện tại</span><b>${money(u.balance || 0)}</b></div>
+    ${p.guide ? `<div class="guide"><b>📖 Hướng dẫn sử dụng</b><div>${esc(p.guide).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')}</div></div>` : ''}
     <form id="fBuy">
       ${p.comboCount > 0
         ? `<label>${esc(p.need || 'Danh sách Gmail cần nâng cấp')} *</label><textarea name="extra" required maxlength="600" rows="${Math.max(2, p.comboCount)}" placeholder="Mỗi dòng 1 Gmail"></textarea><p class="sub" style="margin:6px 0 0">Nhập đúng <b>${p.comboCount}</b> Gmail, mỗi dòng 1 Gmail.</p>`

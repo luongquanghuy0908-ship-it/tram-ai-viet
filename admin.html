@@ -448,6 +448,8 @@ function showProductForm(p) {
         <input name="qty" required inputmode="numeric" value="${p.qty === null || p.qty === undefined ? 10 : p.qty}">
         <label>🎁 Nội dung TỰ GIAO ngay khi khách mua xong (vd: link khoá học, link tải, hướng dẫn). Để trống nếu giao từ Kho hoặc giao tay.</label>
         <textarea name="deliver" rows="4" placeholder="vd: Link học: https://... &#10;Mật khẩu vào học: 1234">${esc(p.deliver || '')}</textarea>
+        <label>📖 Hướng dẫn sử dụng (tự gửi kèm khi giao hàng: hiện cho khách và gửi vào Gmail của họ). Để trống nếu không cần.</label>
+        <textarea name="guide" rows="5" placeholder="vd: Bước 1: Đăng nhập tại ...&#10;Bước 2: ...&#10;Lưu ý: không đổi mật khẩu">${esc(p.guide || '')}</textarea>
         <label>Bảo hành</label><input name="warranty" value="${esc(p.warranty)}">
         <label>Khách cần gửi thêm (để trống nếu không cần)</label><input name="need" value="${esc(p.need)}" placeholder="vd: Gmail nhận tài khoản">
         <label>Danh sách lựa chọn cho khách bấm (cách nhau dấu phẩy, để trống = khách gõ tay)</label>
@@ -472,7 +474,7 @@ function showProductForm(p) {
       await apiPost({
         action: 'adminSaveProduct', id: fd.get('id'), name: fd.get('name'), group: fd.get('group'),
         duration: fd.get('duration'), price: fd.get('price'), qty: Number(fd.get('qty')), warranty: fd.get('warranty'),
-        need: fd.get('need'), deliver: fd.get('deliver'), optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
+        need: fd.get('need'), deliver: fd.get('deliver'), guide: fd.get('guide'), optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
         comboCount: Number(fd.get('comboCount')), visible: fd.get('visible') === 'on',
       });
       toast('Đã lưu sản phẩm'); loadProducts();
