@@ -320,6 +320,10 @@ function logLedger(phone, kind, delta, before, after, ref) {
   } catch (err) { console.error('logLedger: ' + err); }
 }
 
+function custName(phone) {
+  try { const f = findCustomer(phone); return f.data ? String(f.data[K.name]) : '(không rõ)'; } catch (err) { return '(không rõ)'; }
+}
+
 function checkPassword(pw) {
   pw = String(pw || '');
   if (pw.length < 6) throw new Error('Mật khẩu cần ít nhất 6 ký tự');
@@ -583,7 +587,7 @@ function markDepositPaid(sh, row, r, bankRef, actualAmount) {
   const credit = Number(actualAmount) > 0 ? Number(actualAmount) : requested;
   const newBalance = changeBalance(r[D.phone], credit, 'Nạp ví', r[D.code] + (bankRef ? ' · GD ' + bankRef : ''));
   const extra = credit > requested ? ' (khách chuyển dư ' + fmt(credit - requested) + ', đã cộng đủ)' : credit < requested ? ' (khách chuyển thiếu ' + fmt(requested - credit) + ', đã cộng theo số tiền thực nhận)' : '';
-  notifyOwner('✅ Nạp ví ' + r[D.code] + ' — cộng ' + fmt(credit) + extra + ' cho ' + r[D.phone] + '. Số dư mới: ' + fmt(newBalance));
+  notifyOwner('✅ NẠP VÍ THÀNH CÔNG — ' + fmt(credit) + '\nKhách: ' + custName(r[D.phone]) + '\nSĐT: ' + r[D.phone] + '\nMã nạp: ' + r[D.code] + (bankRef ? '\nMã GD ngân hàng: ' + bankRef : '') + (extra ? '\nLưu ý:' + extra : '') + '\nSố dư mới: ' + fmt(newBalance));
   return newBalance;
 }
 
@@ -635,7 +639,7 @@ function handleSepay(e) {
       else if (found.data[D.status] === DS.DONE) {
         // Khách quét lại mã QR cũ / chuyển thêm cùng nội dung → vẫn cộng tiền thực nhận vào ví, không để mất tiền
         const nb = changeBalance(found.data[D.phone], amount, 'Nạp ví', code + ' (chuyển thêm) · GD ' + (t.referenceCode || txId));
-        notifyOwner('✅ Nhận thêm ' + fmt(amount) + ' cùng mã nạp ' + code + ' — đã cộng ví ' + found.data[D.phone] + '. Số dư mới: ' + fmt(nb));
+        notifyOwner('✅ NẠP THÊM CÙNG MÃ CŨ — ' + fmt(amount) + '\nKhách: ' + custName(found.data[D.phone]) + '\nSĐT: ' + found.data[D.phone] + '\nMã nạp: ' + code + '\nMã GD ngân hàng: ' + (t.referenceCode || txId) + '\nSố dư mới: ' + fmt(nb));
         result = 'Đã cộng ví (chuyển thêm)';
       } else {
         markDepositPaid(sh, found.row, found.data, t.referenceCode || txId, amount);
@@ -893,7 +897,7 @@ function adminAdjustBalance(b) {
   lock.waitLock(20000);
   try {
     const newBalance = changeBalance(phone, delta, delta > 0 ? 'Admin cộng' : 'Admin trừ', String(b.reason || '').slice(0, 200));
-    notifyOwner('🛠️ Admin ' + (delta > 0 ? 'cộng' : 'trừ') + ' ' + fmt(Math.abs(delta)) + ' ví ' + phone + '. Số dư mới: ' + fmt(newBalance) + (b.reason ? '\nLý do: ' + b.reason : ''));
+    notifyOwner('🛠️ Admin ' + (delta > 0 ? 'cộng' : 'trừ') + ' ' + fmt(Math.abs(delta)) + ' ví ' + custName(phone) + ' (' + phone + '). Số dư mới: ' + fmt(newBalance) + (b.reason ? '\nLý do: ' + b.reason : ''));
     return { ok: true, balance: newBalance };
   } finally { lock.releaseLock(); }
 }
