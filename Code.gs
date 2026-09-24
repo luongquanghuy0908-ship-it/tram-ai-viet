@@ -87,6 +87,8 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('🛒 Shop')
     .addItem('Xác nhận ĐÃ NHẬN TIỀN cho dòng đang chọn (đơn cũ / nạp ví)', 'menuMarkPaid')
     .addItem('Xem URL webhook SePay', 'menuShowWebhook')
+    .addItem('📲 Cài thông báo Telegram', 'menuSetupTelegram')
+    .addItem('Gỡ thông báo Telegram', 'menuResetTelegram')
     .addToUi();
 }
 
@@ -112,6 +114,38 @@ function menuMarkPaid() {
       ui.alert('Hãy mở tab DonHang (đơn cũ) hoặc NapTien (nạp ví) rồi bấm vào dòng cần duyệt.');
     }
   } finally { lock.releaseLock(); }
+}
+
+// Cài Telegram ngay trong Sheet: dán token bot (không cần gửi cho ai), hệ thống tự tìm mã chat và gửi tin thử
+function menuSetupTelegram() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getScriptProperties();
+  let tk = props.getProperty('TELEGRAM_TOKEN');
+  if (!tk) {
+    const r = ui.prompt('Cài thông báo Telegram — bước 1/2', 'Dán token của bot (lấy từ @BotFather, dạng 123456789:AAxxxx...):', ui.ButtonSet.OK_CANCEL);
+    if (r.getSelectedButton() !== ui.Button.OK) return;
+    tk = r.getResponseText().trim();
+    let me;
+    try { me = JSON.parse(UrlFetchApp.fetch('https://api.telegram.org/bot' + encodeURIComponent(tk) + '/getMe', { muteHttpExceptions: true }).getContentText()); } catch (err) { me = null; }
+    if (!me || !me.ok) return ui.alert('Token không đúng. Kiểm tra lại token từ @BotFather rồi thử lại.');
+    props.setProperty('TELEGRAM_TOKEN', tk);
+    return ui.alert('Token đúng — bot @' + me.result.username + '.\n\nBước 2: mở Telegram, tìm @' + me.result.username + ', bấm Start và gửi 1 tin nhắn bất kỳ (vd "hi").\nSau đó quay lại đây, bấm lại menu "Cài thông báo Telegram".');
+  }
+  let upd;
+  try { upd = JSON.parse(UrlFetchApp.fetch('https://api.telegram.org/bot' + encodeURIComponent(tk) + '/getUpdates', { muteHttpExceptions: true }).getContentText()); } catch (err) { upd = null; }
+  if (!upd || !upd.ok) return ui.alert('Không đọc được tin từ bot (' + (upd && upd.description ? upd.description : 'lỗi mạng') + '). Nếu bot này đang dùng cho việc khác (webhook), hãy tạo 1 bot MỚI riêng cho thông báo shop, chọn "Gỡ thông báo Telegram" rồi cài lại.');
+  const m = (upd.result || []).map(u => u.message).filter(Boolean).pop();
+  if (!m) return ui.alert('Chưa thấy tin nhắn nào gửi cho bot. Mở Telegram, bấm Start bot và gửi 1 tin bất kỳ, rồi bấm lại menu này.');
+  props.setProperty('TELEGRAM_CHAT_ID', String(m.chat.id));
+  notifyOwner('✅ Telegram đã kết nối với ' + SHOP.name + '. Từ giờ đơn mới, tiền nạp về, tiền chuyển nhầm... sẽ báo ở đây.');
+  ui.alert('Xong! Bot đã gửi 1 tin thử vào Telegram của bạn. Thấy tin đó là cài đặt thành công; từ giờ thông báo đi qua Telegram, không tốn hạn mức email.');
+}
+
+function menuResetTelegram() {
+  const props = PropertiesService.getScriptProperties();
+  props.deleteProperty('TELEGRAM_TOKEN');
+  props.deleteProperty('TELEGRAM_CHAT_ID');
+  SpreadsheetApp.getUi().alert('Đã gỡ. Thông báo sẽ quay lại gửi qua email. Bấm "Cài thông báo Telegram" để cài lại.');
 }
 
 function menuShowWebhook() {
@@ -671,17 +705,20 @@ function notifyCustomerDelivered(email, name, product, content) {
 
 // ===== Báo chủ shop: Gmail + Telegram (nếu đã điền TELEGRAM_TOKEN, TELEGRAM_CHAT_ID) =====
 function notifyOwner(msg) {
-  try { MailApp.sendEmail(Session.getEffectiveUser().getEmail(), '[Shop] ' + msg.split('\n')[0], msg); } catch (err) { console.error(err); }
   const props = PropertiesService.getScriptProperties();
   const tk = props.getProperty('TELEGRAM_TOKEN');
   const chat = props.getProperty('TELEGRAM_CHAT_ID');
+  let sent = false;
   if (tk && chat) {
     try {
-      UrlFetchApp.fetch('https://api.telegram.org/bot' + tk + '/sendMessage', {
+      const r = UrlFetchApp.fetch('https://api.telegram.org/bot' + tk + '/sendMessage', {
         method: 'post', payload: { chat_id: chat, text: msg }, muteHttpExceptions: true,
       });
+      sent = r.getResponseCode() === 200;
     } catch (err) { console.error(err); }
   }
+  // Đã có Telegram thì không gửi email báo chủ shop nữa, để dành hạn mức ~100 email/ngày cho email giao hàng của khách
+  if (!sent) { try { MailApp.sendEmail(Session.getEffectiveUser().getEmail(), '[Shop] ' + msg.split('\n')[0], msg); } catch (err) { console.error(err); } }
 }
 
 // ===== Admin =====
