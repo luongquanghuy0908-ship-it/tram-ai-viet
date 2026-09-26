@@ -273,21 +273,22 @@ function findProductRow(id) {
 }
 
 // Trừ 1 vào "Số lượng còn" khi bán được 1 đơn. Bỏ qua (không trừ) nếu để trống = không giới hạn. Trả về false nếu đã hết hàng (hết hàng thì KHÔNG trừ âm).
-function takeQty(id) {
+function takeQty(id, n) {
+  n = n || 1;
   const f = findProductRow(id);
   if (!f.data) return true;
   const q = qtyOf(f.data[11]);
   if (q === null) return true;
-  if (q <= 0) return false;
-  f.sh.getRange(f.row, 12).setValue(q - 1);
+  if (q < n) return false;
+  f.sh.getRange(f.row, 12).setValue(q - n);
   return true;
 }
 
 // Mỗi đơn thật thành công tự cộng 1 vào "Đã bán"
-function addSold(id) {
+function addSold(id, n) {
   const f = findProductRow(id);
   if (!f.data) return;
-  f.sh.getRange(f.row, 15).setValue((Number(f.data[14]) || 0) + 1);
+  f.sh.getRange(f.row, 15).setValue((Number(f.data[14]) || 0) + (n || 1));
 }
 
 function findProduct(id) {
@@ -557,7 +558,10 @@ function createOrder(b) {
   if (!p) throw new Error('Sản phẩm không tồn tại hoặc đã ngừng bán');
   if (p.price <= 0) throw new Error('Sản phẩm này vui lòng liên hệ Zalo shop');
   const c = requireSession(b.session);
-  const extra = String(b.extra || '').trim().slice(0, 600);
+  // Số lượng mua: sản phẩm combo luôn 1; còn lại 1–10
+  const count = p.comboCount > 0 ? 1 : Math.max(1, Math.min(10, Math.floor(Number(b.count)) || 1));
+  const total = p.price * count;
+  const extra = String(b.extra || '').trim().slice(0, 1200);
   if (p.need && !extra) throw new Error('Vui lòng nhập: ' + p.need);
   // options áp dụng cho trường đầu tiên — chỉ ép so khớp chặt khi sản phẩm chỉ có đúng 1 trường (extra = cả chuỗi)
   const needFieldCount = p.need ? p.need.split('|').filter(s => s.trim()).length : 0;
@@ -566,33 +570,42 @@ function createOrder(b) {
     const nLines = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
     if (nLines !== p.comboCount) throw new Error('Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.');
   }
+  // Mua nhiều + chỉ 1 ô nhập tự do (vd Gmail cần nâng) → mỗi sản phẩm 1 dòng
+  if (p.comboCount === 0 && count > 1 && needFieldCount === 1 && !p.options.length) {
+    const nLines = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
+    if (nLines !== count) throw new Error('Bạn mua ' + count + ' sản phẩm, vui lòng nhập đúng ' + count + ' dòng, mỗi dòng 1 thông tin.');
+  }
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    if (c.balance < p.price) {
-      throw new Error('Số dư ví (' + fmt(c.balance) + ') không đủ. Vui lòng nạp thêm ít nhất ' + fmt(p.price - c.balance) + '.');
+    if (c.balance < total) {
+      throw new Error('Số dư ví (' + fmt(c.balance) + ') không đủ. Vui lòng nạp thêm ít nhất ' + fmt(total - c.balance) + '.');
     }
-    if (!takeQty(p.id)) throw new Error('Sản phẩm này vừa hết hàng, vui lòng chọn sản phẩm khác hoặc nhắn Zalo shop.');
+    if (!takeQty(p.id, count)) {
+      const left = qtyOf((findProductRow(p.id).data || [])[11]);
+      throw new Error(left > 0 ? 'Chỉ còn ' + left + ' sản phẩm, vui lòng giảm số lượng.' : 'Sản phẩm này vừa hết hàng, vui lòng chọn sản phẩm khác hoặc nhắn Zalo shop.');
+    }
     const sh = SpreadsheetApp.getActive().getSheetByName(SH.orders.name);
     const code = genCode(sh, PREFIX);
-    const newBalance = changeBalance(c.phone, -p.price, 'Mua hàng', code);
-    addSold(p.id);
+    const newBalance = changeBalance(c.phone, -total, 'Mua hàng', code + (count > 1 ? ' (x' + count + ')' : ''));
+    addSold(p.id, count);
     bumpOrderCount(c.phone);
     const token = newToken().slice(0, 24);
-    const base = p.deliver || takeStock(p.id, code);
+    const pname = count > 1 ? p.name + ' × ' + count : p.name;
+    const base = p.deliver || takeStocks(p.id, code, count);
     const item = base ? withGuide(base, p.guide) : base;
     const status = item ? ST.DONE : ST.PAID;
-    sh.appendRow([code, token, now(), p.id, p.name, p.price, textCell(c.phone), extra, status, item || '', now(), 'Ví', c.name, c.email]);
+    sh.appendRow([code, token, now(), p.id, pname, total, textCell(c.phone), extra, status, item || '', now(), 'Ví', c.name, c.email]);
     if (item) {
-      notifyOwner('✅ Đơn ' + code + ' trả bằng VÍ ' + fmt(p.price) + ' — ĐÃ TỰ GIAO\n' + p.name + '\nKhách: ' + c.name + ' — ' + c.phone + ' — ' + c.email);
-      notifyCustomerDelivered(c.email, c.name, p.name, item);
+      notifyOwner('✅ Đơn ' + code + ' trả bằng VÍ ' + fmt(total) + ' — ĐÃ TỰ GIAO\n' + pname + '\nKhách: ' + c.name + ' — ' + c.phone + ' — ' + c.email);
+      notifyCustomerDelivered(c.email, c.name, pname, item);
     } else {
-      notifyOwner('🔔 Đơn ' + code + ' trả bằng VÍ ' + fmt(p.price) + ' — CẦN GIAO TAY\n' + p.name +
+      notifyOwner('🔔 Đơn ' + code + ' trả bằng VÍ ' + fmt(total) + ' — CẦN GIAO TAY\n' + pname +
         '\nKhách: ' + c.name + ' — ' + c.phone + ' — ' + c.email + (extra ? '\nKhách gửi: ' + extra : '') +
         '\n→ Mở tab DonHang, điền cột "Nội dung giao cho khách" rồi đổi trạng thái thành "' + ST.DONE + '"');
     }
-    return { code, token, amount: p.price, product: p.name, status, content: item || '', balance: newBalance, bank: BANK };
+    return { code, token, amount: total, product: pname, status, content: item || '', balance: newBalance, bank: BANK };
   } finally { lock.releaseLock(); }
 }
 
@@ -753,6 +766,19 @@ function takeStock(pid, code) {
     }
   }
   return null;
+}
+
+// Lấy đúng n món từ Kho cho 1 đơn; không đủ n thì KHÔNG lấy món nào (đơn chuyển sang giao tay)
+function takeStocks(pid, code, n) {
+  const sh = SpreadsheetApp.getActive().getSheetByName(SH.stock.name);
+  const data = sh.getDataRange().getValues();
+  const rows = [];
+  for (let i = 1; i < data.length && rows.length < n; i++) {
+    if (String(data[i][0]) === String(pid) && data[i][1] && !data[i][2]) rows.push(i);
+  }
+  if (rows.length < n) return null;
+  rows.forEach(i => sh.getRange(i + 1, 3, 1, 2).setValues([[code, now()]]));
+  return rows.map(i => String(data[i][1])).join('\n\n———\n\n');
 }
 
 // Gửi bản sao thông tin đã giao vào Gmail khách đã đăng ký, phòng khi khách lỡ đóng trang web

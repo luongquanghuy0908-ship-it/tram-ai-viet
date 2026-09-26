@@ -60,6 +60,10 @@ header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-f
 .warnbox{margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fecaca;font-size:14px;line-height:1.5}
 .warnbox b{color:#fff}
 .notice .thanks{margin-top:10px;font-size:13px}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stepper button{width:42px;height:38px;background:var(--bg2);color:var(--text);font-size:22px;line-height:1}
+.stepper button:hover{background:var(--card)}
+.stepper input{width:52px;height:38px;text-align:center;background:transparent;border:0;border-left:1px solid var(--line);border-right:1px solid var(--line);color:var(--text);font-size:16px;font-weight:700;border-radius:0;padding:0}
 .guide{margin:12px 0;padding:12px 14px;border-radius:12px;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.35);font-size:14px;line-height:1.55}
 .guide b{display:block;margin-bottom:4px;color:var(--brand2)}
 .guide div{white-space:pre-wrap;color:var(--text);max-height:220px;overflow-y:auto}
@@ -701,53 +705,92 @@ function renderList() {
 // ===== Mua hàng (trừ thẳng vào ví) =====
 // "Khách cần gửi thêm" trong Sheet viết nhiều mục cách nhau bằng "|" (vd "Gmail nhận tài khoản|Số điện thoại")
 // sẽ tự tách thành nhiều ô nhập riêng, rồi ghép lại 1 dòng khi lưu để cột "Khách gửi thêm" vẫn đọc được trong Sheet.
+const MAX_BUY = 10;
 function startBuy(id) {
   const p = DATA.products.find(x => x.id === id);
   if (!p) return;
   if (soldOut(p)) return toast('Sản phẩm này đã hết hàng');
   if (!user()) return showAuth('login', () => startBuy(id));
   const u = user();
-  const enough = (u.balance || 0) >= p.price;
+  const bal = u.balance || 0;
   const needFields = (p.comboCount > 0 || !p.need) ? [] : p.need.split('|').map(s => s.trim()).filter(Boolean);
+  const hasOptions = !!(p.options && p.options.length);
+  // Chỉ 1 ô nhập tự do (vd Gmail cần nâng): mua nhiều thì mỗi sản phẩm 1 dòng
+  const freeSingle = p.comboCount === 0 && needFields.length === 1 && !hasOptions;
+  const hasStock = p.qty !== null && p.qty !== undefined;
+  const maxN = p.comboCount > 0 ? 1 : Math.max(1, Math.min(MAX_BUY, hasStock ? p.qty : MAX_BUY));
+  let n = 1;
   openModal(`
     <h2>${esc(p.name)}</h2>
     <p class="sub">${esc([p.duration !== '-' ? p.duration : '', p.warranty].filter(Boolean).join(' · '))}</p>
-    <div class="sum"><span>Giá</span><b>${money(p.price)}</b></div>
-    <div class="row"><span>Số dư ví hiện tại</span><b>${money(u.balance || 0)}</b></div>
+    <div class="row"><span>Giá 1 sản phẩm</span><b>${money(p.price)}</b></div>
+    ${maxN > 1 ? `<div class="row"><span>Số lượng${hasStock ? ' <small style="color:var(--muted)">(còn ' + p.qty + ')</small>' : ''}</span><div class="stepper"><button type="button" id="qMinus" aria-label="Giảm số lượng">−</button><input id="qNum" inputmode="numeric" maxlength="2" value="1" aria-label="Số lượng"><button type="button" id="qPlus" aria-label="Tăng số lượng">+</button></div></div>` : ''}
+    <div class="sum"><span>Thành tiền</span><b id="bTotal">${money(p.price)}</b></div>
+    <div class="row"><span>Số dư ví hiện tại</span><b>${money(bal)}</b></div>
     ${p.guide ? `<div class="guide"><b>📖 Hướng dẫn sử dụng</b><div>${esc(p.guide).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')}</div></div>` : ''}
     <form id="fBuy">
       ${p.comboCount > 0
         ? `<label>${esc(p.need || 'Danh sách Gmail cần nâng cấp')} *</label><textarea name="extra" required maxlength="600" rows="${Math.max(2, p.comboCount)}" placeholder="Mỗi dòng 1 Gmail"></textarea><p class="sub" style="margin:6px 0 0">Nhập đúng <b>${p.comboCount}</b> Gmail, mỗi dòng 1 Gmail.</p>`
         : needFields.length > 1
-          ? needFields.map((label, i) => (i === 0 && p.options && p.options.length)
+          ? needFields.map((label, i) => (i === 0 && hasOptions)
               ? `<label>${esc(label)} *</label><select name="extra0" required><option value="" disabled selected>-- Chọn --</option>${p.options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>`
               : `<label>${esc(label)} *</label><input name="extra${i}" required maxlength="150">`).join('')
           : needFields.length === 1
-            ? (p.options && p.options.length
+            ? (hasOptions
                 ? `<label>${esc(needFields[0])} *</label><select name="extra" required><option value="" disabled selected>-- Chọn --</option>${p.options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>`
-                : `<label>${esc(needFields[0])} *</label><input name="extra" required maxlength="300">`)
+                : '<div id="freeBox"></div>')
             : `<label>Ghi chú cho shop (không bắt buộc)</label><input name="extra" maxlength="300">`}
-      <div class="err" id="bErr">${enough ? '' : 'Số dư không đủ, cần nạp thêm ' + money(p.price - (u.balance || 0)) + '.'}</div>
-      ${enough
-        ? `<button class="btn pri block" type="submit">Xác nhận mua — trừ ${money(p.price)} trong ví</button>`
-        : `<button class="btn pri block" type="button" id="btnGoTopup">Nạp thêm ${money(p.price - (u.balance || 0))} rồi mua</button>`}
+      <p class="sub" id="bHint" style="margin:6px 0 0"></p>
+      <div class="err" id="bErr"></div>
+      <button class="btn pri block" type="submit" id="bSubmit">Xác nhận mua</button>
     </form>`);
-  if (!enough) { $('#btnGoTopup').onclick = () => showTopup(() => startBuy(id), p.price - (u.balance || 0)); return; }
+
+  function renderFree() {
+    const box = $('#freeBox');
+    if (!box) return;
+    const old = box.querySelector('[name="extra"]');
+    const cur = old ? old.value : '';
+    box.innerHTML = n === 1
+      ? `<label>${esc(needFields[0])} *</label><input name="extra" required maxlength="300">`
+      : `<label>${esc(needFields[0])} * — mỗi dòng 1 cái, đủ ${n} dòng</label><textarea name="extra" required maxlength="1000" rows="${Math.min(n, 6)}" placeholder="Mỗi dòng 1 thông tin"></textarea>`;
+    box.querySelector('[name="extra"]').value = cur;
+  }
+  function refresh() {
+    const total = p.price * n;
+    const enough = bal >= total;
+    $('#bTotal').textContent = money(total);
+    $('#bErr').textContent = enough ? '' : 'Số dư không đủ, cần nạp thêm ' + money(total - bal) + '.';
+    $('#bSubmit').textContent = enough ? 'Xác nhận mua — trừ ' + money(total) + ' trong ví' : 'Nạp thêm ' + money(total - bal) + ' rồi mua';
+    $('#bHint').textContent = n > 1 && needFields.length > 0 && !freeSingle && p.comboCount === 0 ? 'Thông tin này áp dụng cho cả ' + n + ' sản phẩm.' : '';
+    if (freeSingle) renderFree();
+  }
+  function setN(v) {
+    n = Math.max(1, Math.min(maxN, parseInt(v, 10) || 1));
+    const q = $('#qNum');
+    if (q) q.value = n;
+    refresh();
+  }
+  if (maxN > 1) {
+    $('#qMinus').onclick = () => setN(n - 1);
+    $('#qPlus').onclick = () => setN(n + 1);
+    $('#qNum').onchange = e => setN(e.target.value);
+    $('#qNum').oninput = e => { const d = e.target.value.replace(/\D/g, ''); if (d !== e.target.value) e.target.value = d; if (d) setN(d); };
+  }
+  refresh();
+
   $('#fBuy').onsubmit = async e => {
     e.preventDefault();
-    const btn = e.target.querySelector('.pri'); btn.disabled = true; btn.textContent = 'Đang xử lý…'; $('#bErr').textContent = '';
+    const total = p.price * n;
+    if (bal < total) { closeModal(); return showTopup(() => startBuy(id), total - bal); }
+    const btn = $('#bSubmit'); btn.disabled = true; btn.textContent = 'Đang xử lý…'; $('#bErr').textContent = '';
     const fd = new FormData(e.target);
     const extra = needFields.length > 1 ? needFields.map((_, i) => (fd.get('extra' + i) || '').trim()).join(' | ') : (fd.get('extra') || '');
-    if (p.comboCount > 0) {
-      const n = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
-      if (n !== p.comboCount) {
-        $('#bErr').textContent = 'Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.';
-        btn.disabled = false; btn.textContent = 'Xác nhận mua — trừ ' + money(p.price) + ' trong ví';
-        return;
-      }
-    }
+    const lines = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
+    const bad = p.comboCount > 0 ? (lines !== p.comboCount ? 'Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.' : '')
+      : (freeSingle && n > 1 && lines !== n ? 'Bạn mua ' + n + ' sản phẩm, vui lòng nhập đúng ' + n + ' dòng, mỗi dòng 1 thông tin.' : '');
+    if (bad) { $('#bErr').textContent = bad; btn.disabled = false; refresh(); $('#bErr').textContent = bad; return; }
     try {
-      const o = await apiPost({ action: 'order', productId: id, session: getSession().token, extra });
+      const o = await apiPost({ action: 'order', productId: id, session: getSession().token, extra, count: n });
       updateBalance(o.balance);
       const list = store.get(LS_ORDERS, []);
       list.unshift({ code: o.code, token: o.token, product: o.product, amount: o.amount, at: Date.now() });
@@ -755,8 +798,8 @@ function startBuy(id) {
       showPay(o);
     } catch (err) {
       if (isSessionError(err)) { clearSession(); renderUser(); return showAuth('login', () => startBuy(id)); }
-      if (/không đủ/.test(err.message)) { closeModal(); return showTopup(() => startBuy(id), p.price - (u.balance || 0)); }
-      $('#bErr').textContent = err.message; btn.disabled = false; btn.textContent = 'Xác nhận mua — trừ ' + money(p.price) + ' trong ví';
+      if (/không đủ/.test(err.message)) { closeModal(); return showTopup(() => startBuy(id), total - bal); }
+      btn.disabled = false; refresh(); $('#bErr').textContent = err.message;
     }
   };
 }
