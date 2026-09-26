@@ -446,6 +446,9 @@ function renderProducts() {
 function showProductForm(p) {
   const isNew = !p;
   p = p || { id: '', group: '', name: '', duration: '-', price: 0, warranty: '', need: '', visible: true, comboKey: '', comboCount: 0, optionsText: '', qty: 10 };
+  // Số "còn" và "đã bán" thay đổi mỗi khi có khách mua → chỉ gửi lên khi bạn thật sự sửa, tránh ghi đè số mới bằng số cũ lúc mở form
+  const qtyShown = p.qty === null || p.qty === undefined ? 10 : p.qty;
+  const soldShown = p.sold || 0;
   $('#productsTab').innerHTML = `
     <div class="card">
       <h1 style="margin-bottom:14px">${isNew ? 'Thêm sản phẩm mới' : 'Sửa sản phẩm'}</h1>
@@ -487,8 +490,10 @@ function showProductForm(p) {
     try {
       await apiPost({
         action: 'adminSaveProduct', id: fd.get('id'), name: fd.get('name'), group: fd.get('group'),
-        duration: fd.get('duration'), price: fd.get('price'), qty: Number(fd.get('qty')), warranty: fd.get('warranty'),
-        need: fd.get('need'), deliver: fd.get('deliver'), guide: fd.get('guide'), sold: Number(fd.get('sold')) || 0, optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
+        duration: fd.get('duration'), price: fd.get('price'), warranty: fd.get('warranty'),
+        ...((isNew || Number(fd.get('qty')) !== qtyShown) ? { qty: Number(fd.get('qty')) } : {}),
+        ...((isNew || (Number(fd.get('sold')) || 0) !== soldShown) ? { sold: Number(fd.get('sold')) || 0 } : {}),
+        need: fd.get('need'), deliver: fd.get('deliver'), guide: fd.get('guide'), optionsText: fd.get('optionsText'), comboKey: fd.get('comboKey'),
         comboCount: Number(fd.get('comboCount')), visible: fd.get('visible') === 'on',
       });
       toast('Đã lưu sản phẩm'); loadProducts();

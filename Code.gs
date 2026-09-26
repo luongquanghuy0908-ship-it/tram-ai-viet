@@ -1122,7 +1122,9 @@ function adminSaveProduct(b) {
   if (!name) throw new Error('Vui lòng nhập tên sản phẩm');
   const price = parseMoney(b.price);
   if (!(price >= 0)) throw new Error('Giá không hợp lệ — chỉ nhập số (vd: 149000 hoặc 149k)');
-  const qty = String(b.qty).trim() === '' ? '' : Math.max(0, Math.round(Number(b.qty)) || 0);
+  // qty/sold không gửi lên = giữ nguyên số hiện có trong Sheet (tránh ghi đè số vừa thay đổi do khách mua)
+  const hasQty = b.qty !== undefined, hasSold = b.sold !== undefined;
+  const qty = !hasQty || String(b.qty).trim() === '' ? '' : Math.max(0, Math.round(Number(b.qty)) || 0);
   const row = [
     id, String(b.group || '').trim().slice(0, 60), name, String(b.duration || '-').trim().slice(0, 30), price,
     String(b.warranty || '').trim().slice(0, 100), String(b.need || '').trim().slice(0, 150),
@@ -1136,8 +1138,12 @@ function adminSaveProduct(b) {
     const data = sh.getDataRange().getValues();
     let foundRow = 0;
     for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === id) { foundRow = i + 1; break; } }
-    if (foundRow) sh.getRange(foundRow, 1, 1, row.length).setValues([row]);
-    else sh.appendRow(row);
+    if (foundRow) {
+      const old = data[foundRow - 1];
+      if (!hasQty) row[11] = old[11];
+      if (!hasSold) row[14] = old[14];
+      sh.getRange(foundRow, 1, 1, row.length).setValues([row]);
+    } else sh.appendRow(row);
     return { ok: true, created: !foundRow };
   } finally { lock.releaseLock(); }
 }
