@@ -236,7 +236,7 @@ const ZALO = 'https://zalo.me/0338102653';
 const LS_SESSION = 'tav_session', LS_ORDERS = 'tav_orders';
 
 const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => Number(n).toLocaleString('vi-VN') + ' đ';
 // Bộ nhớ tạm dự phòng khi trình duyệt chặn localStorage (chế độ ẩn danh, một số app)
 const mem = {};
@@ -873,6 +873,9 @@ $('#btnOrders').onclick = async () => {
 renderUser();
 loadProducts();
 checkSession();
+
+// Đếm lượt mở trang ẩn danh (chỉ để chủ shop biết có người vào web)
+try { const seen = localStorage.getItem('tav_seen'); fetch(API + '?action=hit&n=' + (seen ? '0' : '1'), { mode: 'no-cors', keepalive: true }).catch(() => {}); if (!seen) localStorage.setItem('tav_seen', '1'); } catch (e) {}
 </script>
 </body>
 </html>

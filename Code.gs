@@ -15,6 +15,7 @@ const SH = {
   customers: { name: 'KhachHang', header: ['SĐT/Zalo', 'Họ tên', 'Gmail', 'Lần đầu vào', 'Lần cuối vào', 'Số đơn đã đặt', 'Mật khẩu (đã mã hoá, xoá ô này = cho khách đặt lại)', 'Salt', 'Số dư ví (đ)', 'Vai trò (admin/staff, để trống = khách thường)'] },
   sessions: { name: 'PhienDangNhap', header: ['Mã phiên (đã mã hoá)', 'SĐT', 'Tạo lúc', 'Hết hạn (ms)'] },
   deposits: { name: 'NapTien', header: ['Mã nạp', 'Token', 'Thời gian tạo', 'SĐT', 'Số tiền', 'Trạng thái', 'Mã GD ngân hàng', 'Thời gian cộng ví'] },
+  visits: { name: 'LuotTruyCap', header: ['Ngày', 'Lượt mở trang', 'Máy mới (lần đầu vào)'] },
   tx: { name: 'GiaoDich', header: ['SePay ID', 'Thời gian', 'Số tiền', 'Nội dung CK', 'Mã đơn khớp', 'Kết quả'] },
 };
 
@@ -158,6 +159,7 @@ function menuShowWebhook() {
 function doGet(e) {
   const a = (e.parameter.action || '').trim();
   try {
+    if (a === 'hit') return json(trackHit(e.parameter.n === '1'));
     if (a === 'products') return json(listProducts());
     if (a === 'status') return json(orderStatus(e.parameter.code, e.parameter.token));
     if (a === 'topupstatus') return json(topupStatus(e.parameter.code, e.parameter.token));
@@ -183,6 +185,7 @@ function doPost(e) {
     if (body.action === 'adminUpdateOrder') return json(adminUpdateOrder(body));
     if (body.action === 'adminAdjustBalance') return json(idem(body, () => adminAdjustBalance(body)));
     if (body.action === 'adminListCustomers') return json(adminListCustomers(body));
+    if (body.action === 'adminVisits') return json(adminVisits(body));
     if (body.action === 'adminExportCustomers') return json(adminExportCustomers(body));
     if (body.action === 'adminCustomerLedger') return json(adminCustomerLedger(body));
     if (body.action === 'adminReconcile') return json(adminReconcile(body));
@@ -218,6 +221,33 @@ function idem(body, fn) {
     cache.put(k + '_r', JSON.stringify(r), 600);
     return r;
   } finally { cache.remove(k + '_p'); }
+}
+
+// Đếm lượt mở trang theo ngày (ẩn danh, không lưu thông tin khách) để biết có người vào web hay không
+function trackHit(isNew) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(4000)) return { ok: true };
+  try {
+    const sh = sheetOf(SH.visits);
+    const today = Utilities.formatDate(new Date(), TZ, 'dd/MM/yyyy');
+    const last = sh.getLastRow();
+    if (last >= 2) {
+      const r = sh.getRange(last, 1, 1, 3).getValues()[0];
+      const day = r[0] instanceof Date ? Utilities.formatDate(r[0], TZ, 'dd/MM/yyyy') : String(r[0]);
+      if (day === today) {
+        sh.getRange(last, 2, 1, 2).setValues([[(Number(r[1]) || 0) + 1, (Number(r[2]) || 0) + (isNew ? 1 : 0)]]);
+        return { ok: true };
+      }
+    }
+    sh.appendRow([textCell(today), 1, isNew ? 1 : 0]);
+    return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
+function adminVisits(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const rows = sheetOf(SH.visits).getDataRange().getValues().slice(1).slice(-7).reverse();
+  return { days: rows.map(r => ({ day: r[0] instanceof Date ? Utilities.formatDate(r[0], TZ, 'dd/MM') : String(r[0]).slice(0, 5), hits: Number(r[1]) || 0, fresh: Number(r[2]) || 0 })) };
 }
 
 function listProducts() {
@@ -783,10 +813,12 @@ function adminListCustomers(b) {
       balance: Number(rows[i][K.balance]) || 0,
       orders: Number(rows[i][K.orders]) || 0,
       lastSeen: String(fmtDate(rows[i][K.last]) || ''),
+      firstSeen: String(fmtDate(rows[i][K.first]) || ''),
       role: String(rows[i][K.role] || ''),
       isBanned: String(rows[i][K.role] || '').toLowerCase() === 'banned'
     });
   }
+  list.reverse(); // khách đăng ký mới nhất lên đầu
   return { customers: list };
 }
 

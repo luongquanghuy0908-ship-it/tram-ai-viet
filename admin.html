@@ -106,7 +106,7 @@ h1{font-size:20px;margin-bottom:4px}
 const API = 'https://script.google.com/macros/s/AKfycbzV_KlAwzimsh1zEaaTZvO9zcxq5ZmQmTbye17b9NYYNJ1DqeHCT9o20xUXlES1dLNlUw/exec';
 const LS_ADMIN = 'tav_admin_session';
 const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => Number(n).toLocaleString('vi-VN') + ' đ';
 
 let SESSION = null, TAB = 'orders', ORDER_GROUP = 'pending', ORDER_SEARCH = '', ALL_ORDERS = [];
@@ -271,6 +271,8 @@ function renderCustomerList() {
       <button class="btn" id="cBackup" style="flex:1">💾 Sao lưu ngay</button>
     </div>
     <div id="cReport"></div>
+    <div class="card" id="visitBox" style="padding:12px 14px"><b>📊 Lượt truy cập web 7 ngày qua</b><div class="meta" id="visitList">Đang tải…</div></div>
+    <div class="meta" style="margin:0 0 8px">Tổng cộng <b>${ALL_CUSTOMERS.length}</b> khách · mới đăng ký nằm trên cùng</div>
     <input id="cSearch" placeholder="🔍 Tìm theo tên hoặc số điện thoại" value="${esc(CUST_SEARCH)}">
     <div id="clist"></div>`;
   $('#cSearch').oninput = e => { CUST_SEARCH = e.target.value; renderCustomerItems(); };
@@ -290,6 +292,9 @@ function renderCustomerList() {
     btn.disabled = false; btn.textContent = '💾 Sao lưu ngay';
   };
   $('#cReconcile').onclick = () => runReconcile(false);
+  apiPost({ action: 'adminVisits' }).then(v => {
+    $('#visitList').innerHTML = v.days.length ? v.days.map(d => `${esc(d.day)}: <b>${d.hits}</b> lượt mở trang (${d.fresh} máy mới)`).join('<br>') : 'Chưa có lượt nào (bộ đếm mới bật, sẽ hiện khi có người mở web).';
+  }).catch(() => { const el = $('#visitList'); if (el) el.textContent = 'Không tải được'; });
   renderCustomerItems();
 }
 async function runReconcile(baseline) {
@@ -318,7 +323,7 @@ function renderCustomerItems() {
         <div><b>${esc(c.name)}</b> ${c.isBanned ? '<span class="st-badge st-short">Đã khoá</span>' : ''}</div>
         <b>${money(c.balance)}</b>
       </div>
-      <div class="meta">📱 ${esc(c.phone)} · ✉️ ${esc(c.email)} · ${c.orders} đơn</div>
+      <div class="meta">📱 ${esc(c.phone)} · ✉️ ${esc(c.email)} · ${c.orders} đơn${c.firstSeen ? ' · đăng ký ' + esc(c.firstSeen) : ''}</div>
       <div class="detail">
         <label>Số tiền (âm để trừ, dương để cộng)</label>
         <input inputmode="numeric" placeholder="Ví dụ 50000 hoặc -20000" data-delta>
