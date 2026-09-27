@@ -42,6 +42,8 @@ header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-f
 @media(max-width:720px){.nav{height:auto;padding:8px 0;flex-wrap:wrap}.nav-r{width:100%;justify-content:flex-end;flex-wrap:wrap}}
 .welcome{border:1px dashed #f59e0b;background:rgba(245,158,11,.12);border-radius:14px;padding:14px 16px;margin:18px 0 0;font-size:15px;line-height:1.55;text-align:center}
 .welcome b{color:#fbbf24}
+.wcd{margin-top:6px;font-size:14px;color:var(--muted)}
+.wcd b{font-variant-numeric:tabular-nums}
 .policy-box{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:18px 16px;text-align:center;margin:8px 0 22px}
 .policy-box h3{color:#f87171;font-size:18px;margin-bottom:6px}
 .policy-box p{color:var(--muted);font-size:14px;line-height:1.5}
@@ -324,6 +326,16 @@ function isSessionError(err) { return /đăng nhập lại/.test(err.message); }
 const WELCOME_PCT = 10, WELCOME_MIN = 300000, WELCOME_DAYS = 3;
 const WELCOME_LIVE = () => Date.now() <= Date.UTC(2026, 9, 10, 16, 59, 59); // hết ngày 10/10/2026 (giờ VN) tự tắt
 let lastElig = null;
+const WCD = '<div class="wcd">⏳ Chương trình kết thúc sau <b id="wcd"></b> — hết ngày 10/10/2026</div>';
+function tickWcd() {
+  const el = $('#wcd');
+  if (!el) return;
+  const ms = Date.UTC(2026, 9, 10, 16, 59, 59) - Date.now();
+  if (ms <= 0) { $('#welcome').hidden = true; return; }
+  const s = Math.floor(ms / 1000), p2 = n => String(n).padStart(2, '0');
+  el.textContent = Math.floor(s / 86400) + ' ngày ' + p2(Math.floor(s % 86400 / 3600)) + ':' + p2(Math.floor(s % 3600 / 60)) + ':' + p2(s % 60);
+}
+setInterval(tickWcd, 1000);
 function couponTag(price) { return WELCOME_LIVE() && price >= WELCOME_MIN && (!user() || welcomeOf(user())) ? `<span class="tag o">🎁 Lần đầu mua giảm ${WELCOME_PCT}%</span>` : ''; }
 function welcomeOf(u) { const w = u && u.welcome; return w && Date.now() < w.endsAt ? w : null; }
 function leftText(t) { const m = Math.max(1, Math.ceil((t - Date.now()) / 60000)); return m >= 60 ? Math.floor(m / 60) + ' giờ ' + (m % 60) + ' phút' : m + ' phút'; }
@@ -335,11 +347,12 @@ function renderUser() {
   if (u) $('#walBal').textContent = money(u.balance || 0);
   const w = welcomeOf(u), wb = $('#welcome');
   wb.hidden = !(w || (!u && WELCOME_LIVE()));
-  if (!u && WELCOME_LIVE()) wb.innerHTML = '🎁 <b>Khách mới — mua lần đầu giảm ' + WELCOME_PCT + '%</b> cho đơn từ <b>' + money(WELCOME_MIN) + '</b>. Đăng ký tài khoản là nhận, dùng trong <b>' + WELCOME_DAYS + ' ngày</b>. <a id="wReg" style="cursor:pointer;text-decoration:underline;color:#fbbf24">Đăng ký nhận ưu đãi</a>';
+  if (!u && WELCOME_LIVE()) wb.innerHTML = '🎁 <b>Khách mới — mua lần đầu giảm ' + WELCOME_PCT + '%</b> cho đơn từ <b>' + money(WELCOME_MIN) + '</b>. Đăng ký tài khoản là nhận, dùng trong <b>' + WELCOME_DAYS + ' ngày</b>. <a id="wReg" style="cursor:pointer;text-decoration:underline;color:#fbbf24">Đăng ký nhận ưu đãi</a>' + WCD;
   if (!u && WELCOME_LIVE()) $('#wReg').onclick = () => showAuth('register');
+  tickWcd();
   const elig = (!u && WELCOME_LIVE()) || !!w;
   if (elig !== lastElig) { lastElig = elig; if (typeof DATA !== 'undefined' && DATA && DATA.products) renderList(); }
-  if (w) wb.innerHTML = '🎁 <b>Quà chào mừng khách mới:</b> giảm <b>' + w.pct + '%</b> cho đơn đầu tiên từ <b>' + money(w.min) + '</b> — còn <b>' + leftText(w.endsAt) + '</b>. Tự áp dụng khi mua, không cần nhập mã.';
+  if (w) wb.innerHTML = '🎁 <b>Quà chào mừng khách mới:</b> giảm <b>' + w.pct + '%</b> cho đơn đầu tiên từ <b>' + money(w.min) + '</b> — còn <b>' + leftText(w.endsAt) + '</b>. Tự áp dụng khi mua, không cần nhập mã.' + WCD;
   $('#btnLogin').textContent = u ? 'Tài khoản' : 'Đăng nhập';
   const isStaff = s && (s.customer.role === 'admin' || s.customer.role === 'staff');
   let adminBtn = $('#btnAdmin');
