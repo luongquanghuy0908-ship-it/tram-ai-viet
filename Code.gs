@@ -352,7 +352,8 @@ function findCustomer(phone) {
 
 // Mã chào mừng: khách mới đăng ký được giảm WELCOME.pct% cho ĐƠN ĐẦU TIÊN từ WELCOME.min trở lên, trong WELCOME.hours giờ kể từ lúc đăng ký.
 // Không cần nhập mã: máy chủ tự tính từ ngày đăng ký + số đơn đã đặt, khách không sửa được.
-const WELCOME = { pct: 10, min: 300000, hours: 72 };
+// end = hết chương trình: 23:59:59 ngày 10/10/2026 giờ VN (UTC+7). Qua mốc này mã tự biến mất, không cần xoá tay.
+const WELCOME = { pct: 10, min: 300000, hours: 72, end: Date.UTC(2026, 9, 10, 16, 59, 59) };
 function parseVN(s) {
   const m = String(s || '').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
   return m ? Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4] - 7, +m[5], +m[6]) : 0; // giờ Việt Nam = UTC+7
@@ -363,7 +364,7 @@ function welcomeInfo(d) {
   if (role === 'banned' || role === ROLE.ADMIN || role === ROLE.STAFF) return null;
   const t = parseVN(fmtDate(d[K.first]));
   if (!t) return null;
-  const endsAt = t + WELCOME.hours * 36e5;
+  const endsAt = Math.min(t + WELCOME.hours * 36e5, WELCOME.end);
   return Date.now() < endsAt ? { pct: WELCOME.pct, min: WELCOME.min, endsAt } : null;
 }
 function publicCustomer(d) { return { phone: normPhone(d[K.phone]), name: String(d[K.name]), email: String(d[K.email]), balance: Number(d[K.balance]) || 0, role: String(d[K.role] || ''), welcome: welcomeInfo(d) }; }
