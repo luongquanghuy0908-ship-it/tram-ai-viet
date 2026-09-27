@@ -40,7 +40,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.85);backdrop-f
 .btn.wallet{border-color:rgba(34,197,94,.5);color:#86efac}
 .btn.wallet b{color:#fff}
 @media(max-width:720px){.nav{height:auto;padding:8px 0;flex-wrap:wrap}.nav-r{width:100%;justify-content:flex-end;flex-wrap:wrap}}
-.welcome{border:1px dashed #f59e0b;background:rgba(245,158,11,.1);border-radius:14px;padding:12px 14px;margin:0 0 14px;font-size:14px;line-height:1.5}
+.welcome{border:1px dashed #f59e0b;background:rgba(245,158,11,.12);border-radius:14px;padding:14px 16px;margin:18px 0 0;font-size:15px;line-height:1.55;text-align:center}
 .welcome b{color:#fbbf24}
 .policy-box{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:18px 16px;text-align:center;margin:8px 0 22px}
 .policy-box h3{color:#f87171;font-size:18px;margin-bottom:6px}
@@ -177,6 +177,7 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
 </header>
 
 <main class="wrap">
+  <div id="welcome" class="welcome" hidden></div>
   <section class="hero">
     <span class="badge">Thanh toán QR · Nhận hàng tự động 24/7</span>
     <h1>Tài khoản AI Premium <span>giá tốt, bảo hành rõ</span></h1>
@@ -190,7 +191,6 @@ input:focus,textarea:focus{outline:none;border-color:var(--brand)}
   </section>
 
 
-  <div id="welcome" class="welcome" hidden></div>
   <div class="cats" id="cats"></div>
   <div id="list"><div class="loading">Đang tải sản phẩm…</div></div>
 
