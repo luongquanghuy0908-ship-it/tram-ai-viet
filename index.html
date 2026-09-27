@@ -321,6 +321,9 @@ function clearSession() { delete mem[LS_SESSION]; webStores().forEach(s => { try
 function user() { const s = getSession(); return s ? s.customer : null; }
 function isSessionError(err) { return /đăng nhập lại/.test(err.message); }
 
+const WELCOME_PCT = 10, WELCOME_MIN = 300000, WELCOME_DAYS = 3;
+let lastElig = null;
+function couponTag(price) { return price >= WELCOME_MIN && (!user() || welcomeOf(user())) ? `<span class="tag o">🎁 Lần đầu mua giảm ${WELCOME_PCT}%</span>` : ''; }
 function welcomeOf(u) { const w = u && u.welcome; return w && Date.now() < w.endsAt ? w : null; }
 function leftText(t) { const m = Math.max(1, Math.ceil((t - Date.now()) / 60000)); return m >= 60 ? Math.floor(m / 60) + ' giờ ' + (m % 60) + ' phút' : m + ' phút'; }
 function renderUser() {
@@ -330,7 +333,11 @@ function renderUser() {
   $('#btnTopupTop').hidden = !u;
   if (u) $('#walBal').textContent = money(u.balance || 0);
   const w = welcomeOf(u), wb = $('#welcome');
-  wb.hidden = !w;
+  wb.hidden = !(w || !u);
+  if (!u) wb.innerHTML = '🎁 <b>Khách mới — mua lần đầu giảm ' + WELCOME_PCT + '%</b> cho đơn từ <b>' + money(WELCOME_MIN) + '</b>. Đăng ký tài khoản là nhận, dùng trong <b>' + WELCOME_DAYS + ' ngày</b>. <a id="wReg" style="cursor:pointer;text-decoration:underline;color:#fbbf24">Đăng ký nhận ưu đãi</a>';
+  if (!u) $('#wReg').onclick = () => showAuth('register');
+  const elig = !u || !!w;
+  if (elig !== lastElig) { lastElig = elig; if (typeof DATA !== 'undefined' && DATA && DATA.products) renderList(); }
   if (w) wb.innerHTML = '🎁 <b>Quà chào mừng khách mới:</b> giảm <b>' + w.pct + '%</b> cho đơn đầu tiên từ <b>' + money(w.min) + '</b> — còn <b>' + leftText(w.endsAt) + '</b>. Tự áp dụng khi mua, không cần nhập mã.';
   $('#btnLogin').textContent = u ? 'Tài khoản' : 'Đăng nhập';
   const isStaff = s && (s.customer.role === 'admin' || s.customer.role === 'staff');
@@ -689,7 +696,7 @@ function card(p) {
     : `<a class="btn block" href="${ZALO}" target="_blank" rel="noopener">Liên hệ Zalo</a>`;
   return `<div class="card">
     <h3>${esc(p.name)}</h3>
-    <div class="meta">${p.duration && p.duration !== '-' ? `<span class="tag">⏱ ${esc(p.duration)}</span>` : ''}${p.warranty ? `<span class="tag">🛡 ${esc(p.warranty)}</span>` : ''}${soldTag(p.sold)}${qtyTag}${stock}</div>
+    <div class="meta">${p.duration && p.duration !== '-' ? `<span class="tag">⏱ ${esc(p.duration)}</span>` : ''}${p.warranty ? `<span class="tag">🛡 ${esc(p.warranty)}</span>` : ''}${soldTag(p.sold)}${couponTag(p.price)}${qtyTag}${stock}</div>
     <div class="price">${p.price > 0 ? money(p.price) : 'Liên hệ'}</div>
     ${act}
   </div>`;
