@@ -350,24 +350,7 @@ function findCustomer(phone) {
   return { sh, row: 0, data: null };
 }
 
-// Mã chào mừng: khách mới đăng ký được giảm WELCOME.pct% cho ĐƠN ĐẦU TIÊN từ WELCOME.min trở lên, trong WELCOME.hours giờ kể từ lúc đăng ký.
-// Không cần nhập mã: máy chủ tự tính từ ngày đăng ký + số đơn đã đặt, khách không sửa được.
-// end = hết chương trình: 23:59:59 ngày 10/10/2026 giờ VN (UTC+7). Qua mốc này mã tự biến mất, không cần xoá tay.
-const WELCOME = { pct: 10, min: 300000, hours: 72, end: Date.UTC(2026, 9, 10, 16, 59, 59) };
-function parseVN(s) {
-  const m = String(s || '').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
-  return m ? Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4] - 7, +m[5], +m[6]) : 0; // giờ Việt Nam = UTC+7
-}
-function welcomeInfo(d) {
-  if (!d || Number(d[K.orders]) > 0) return null;
-  const role = String(d[K.role] || '').toLowerCase();
-  if (role === 'banned' || role === ROLE.ADMIN || role === ROLE.STAFF) return null;
-  const t = parseVN(fmtDate(d[K.first]));
-  if (!t) return null;
-  const endsAt = Math.min(t + WELCOME.hours * 36e5, WELCOME.end);
-  return Date.now() < endsAt ? { pct: WELCOME.pct, min: WELCOME.min, endsAt } : null;
-}
-function publicCustomer(d) { return { phone: normPhone(d[K.phone]), name: String(d[K.name]), email: String(d[K.email]), balance: Number(d[K.balance]) || 0, role: String(d[K.role] || ''), welcome: welcomeInfo(d) }; }
+function publicCustomer(d) { return { phone: normPhone(d[K.phone]), name: String(d[K.name]), email: String(d[K.email]), balance: Number(d[K.balance]) || 0, role: String(d[K.role] || '') }; }
 
 // Ném lỗi nếu phiên không hợp lệ hoặc không đúng vai trò yêu cầu
 function requireRole(token, roles) {
@@ -592,14 +575,8 @@ function createOrder(b) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    // Đọc lại số dư + quyền mã chào mừng ngay trong khoá để 2 đơn cùng lúc không dùng mã 2 lần
-    const cur = findCustomer(c.phone).data;
-    const w = welcomeInfo(cur);
-    const off = w && total >= w.min ? Math.round(total * w.pct / 100) : 0;
-    const pay = total - off;
-    const bal0 = Number(cur[K.balance]) || 0;
-    if (bal0 < pay) {
-      throw new Error('Số dư ví (' + fmt(bal0) + ') không đủ. Vui lòng nạp thêm ít nhất ' + fmt(pay - bal0) + '.');
+    if (c.balance < total) {
+      throw new Error('Số dư ví (' + fmt(c.balance) + ') không đủ. Vui lòng nạp thêm ít nhất ' + fmt(total - c.balance) + '.');
     }
     if (!takeQty(p.id, count)) {
       const left = qtyOf((findProductRow(p.id).data || [])[11]);
@@ -607,7 +584,7 @@ function createOrder(b) {
     }
     const sh = SpreadsheetApp.getActive().getSheetByName(SH.orders.name);
     const code = genCode(sh, PREFIX);
-    const newBalance = changeBalance(c.phone, -pay, 'Mua hàng', code + (count > 1 ? ' (x' + count + ')' : '') + (off ? ' (mã chào mừng -' + off + ')' : ''));
+    const newBalance = changeBalance(c.phone, -total, 'Mua hàng', code + (count > 1 ? ' (x' + count + ')' : ''));
     addSold(p.id, count);
     bumpOrderCount(c.phone);
     const token = newToken().slice(0, 24);
@@ -615,16 +592,16 @@ function createOrder(b) {
     const base = p.deliver || takeStocks(p.id, code, count);
     const item = base ? withGuide(base, p.guide) : base;
     const status = item ? ST.DONE : ST.PAID;
-    sh.appendRow([code, token, now(), p.id, pname, pay, textCell(c.phone), extra, status, item || '', now(), 'Ví', c.name, c.email]);
+    sh.appendRow([code, token, now(), p.id, pname, total, textCell(c.phone), extra, status, item || '', now(), 'Ví', c.name, c.email]);
     if (item) {
-      notifyOwner('✅ Đơn ' + code + ' trả bằng VÍ ' + fmt(pay) + ' — ĐÃ TỰ GIAO\n' + pname + (off ? '\n🎁 Đã áp mã chào mừng: -' + fmt(off) : '') + '\nKhách: ' + c.name + ' — ' + c.phone + ' — ' + c.email);
+      notifyOwner('✅ Đơn ' + code + ' trả bằng VÍ ' + fmt(total) + ' — ĐÃ TỰ GIAO\n' + pname + '\nKhách: ' + c.name + ' — ' + c.phone + ' — ' + c.email);
       notifyCustomerDelivered(c.email, c.name, pname, item);
     } else {
-      notifyOwner('🔔 Đơn ' + code + ' trả bằng VÍ ' + fmt(pay) + ' — CẦN GIAO TAY\n' + pname + (off ? '\n🎁 Đã áp mã chào mừng: -' + fmt(off) : '') +
+      notifyOwner('🔔 Đơn ' + code + ' trả bằng VÍ ' + fmt(total) + ' — CẦN GIAO TAY\n' + pname +
         '\nKhách: ' + c.name + ' — ' + c.phone + ' — ' + c.email + (extra ? '\nKhách gửi: ' + extra : '') +
         '\n→ Mở tab DonHang, điền cột "Nội dung giao cho khách" rồi đổi trạng thái thành "' + ST.DONE + '"');
     }
-    return { code, token, amount: pay, discount: off, product: pname, status, content: item || '', balance: newBalance, bank: BANK };
+    return { code, token, amount: total, product: pname, status, content: item || '', balance: newBalance, bank: BANK };
   } finally { lock.releaseLock(); }
 }
 
