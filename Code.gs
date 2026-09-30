@@ -587,11 +587,7 @@ function createOrder(b) {
     const nLines = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
     if (nLines !== p.comboCount) throw new Error('Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.');
   }
-  // Mua nhiều + chỉ 1 ô nhập tự do (vd Gmail cần nâng) → mỗi sản phẩm 1 dòng
-  if (p.comboCount === 0 && count > 1 && needFieldCount === 1 && !p.options.length) {
-    const nLines = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
-    if (nLines !== count) throw new Error('Bạn mua ' + count + ' sản phẩm, vui lòng nhập đúng ' + count + ' dòng, mỗi dòng 1 thông tin.');
-  }
+  // Mua nhiều + chỉ 1 ô nhập tự do (vd Gmail nhận hàng) → luôn chỉ 1 Gmail, giao cả count sản phẩm về đúng Gmail đó
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);

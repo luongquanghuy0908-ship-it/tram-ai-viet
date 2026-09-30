@@ -778,12 +778,8 @@ function startBuy(id) {
   function renderFree() {
     const box = $('#freeBox');
     if (!box) return;
-    const old = box.querySelector('[name="extra"]');
-    const cur = old ? old.value : '';
-    box.innerHTML = n === 1
-      ? `<label>${esc(needFields[0])} *</label><input name="extra" required maxlength="300">`
-      : `<label>${esc(needFields[0])} * — mỗi dòng 1 cái, đủ ${n} dòng</label><textarea name="extra" required maxlength="1000" rows="${Math.min(n, 6)}" placeholder="Mỗi dòng 1 thông tin"></textarea>`;
-    box.querySelector('[name="extra"]').value = cur;
+    if (box.querySelector('[name="extra"]')) return; // chỉ dựng 1 lần — luôn 1 ô, không đổi theo số lượng
+    box.innerHTML = `<label>${esc(needFields[0])} *</label><input name="extra" required maxlength="300">`;
   }
   function calc() {
     const w = welcomeOf(user());
@@ -799,7 +795,7 @@ function startBuy(id) {
     $('#bTotal').textContent = money(total);
     $('#bErr').textContent = enough ? '' : 'Số dư không đủ, cần nạp thêm ' + money(total - bal) + '.';
     $('#bSubmit').textContent = enough ? 'Xác nhận mua — trừ ' + money(total) + ' trong ví' : 'Nạp thêm ' + money(total - bal) + ' rồi mua';
-    $('#bHint').textContent = n > 1 && needFields.length > 0 && !freeSingle && p.comboCount === 0 ? 'Thông tin này áp dụng cho cả ' + n + ' sản phẩm.' : '';
+    $('#bHint').textContent = n > 1 && needFields.length > 0 && p.comboCount === 0 ? 'Thông tin này áp dụng cho cả ' + n + ' sản phẩm.' : '';
     if (freeSingle) renderFree();
   }
   function setN(v) {
@@ -824,8 +820,7 @@ function startBuy(id) {
     const fd = new FormData(e.target);
     const extra = needFields.length > 1 ? needFields.map((_, i) => (fd.get('extra' + i) || '').trim()).join(' | ') : (fd.get('extra') || '');
     const lines = extra.split('\n').map(s => s.trim()).filter(Boolean).length;
-    const bad = p.comboCount > 0 ? (lines !== p.comboCount ? 'Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.' : '')
-      : (freeSingle && n > 1 && lines !== n ? 'Bạn mua ' + n + ' sản phẩm, vui lòng nhập đúng ' + n + ' dòng, mỗi dòng 1 thông tin.' : '');
+    const bad = p.comboCount > 0 && lines !== p.comboCount ? 'Vui lòng nhập đúng ' + p.comboCount + ' Gmail, mỗi dòng 1 Gmail.' : '';
     if (bad) { $('#bErr').textContent = bad; btn.disabled = false; refresh(); $('#bErr').textContent = bad; return; }
     try {
       const o = await apiPost({ action: 'order', productId: id, session: getSession().token, extra, count: n });
