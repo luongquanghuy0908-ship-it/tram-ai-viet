@@ -423,9 +423,23 @@ function logout(token) {
   return { ok: true };
 }
 
+// Chống spam đăng ký: ô bẫy (bot điền vào), điền form quá nhanh (<3 giây), và tối đa REG_LIMIT tài khoản mới mỗi 10 phút trên toàn shop
+const REG_LIMIT = 20;
+function checkRegSpam(b) {
+  if (String(b.website || '').trim()) throw new Error('Không thể tạo tài khoản lúc này.');
+  const at = Number(b.formAt) || 0;
+  if (at && Date.now() - at < 3000) throw new Error('Vui lòng điền form chậm hơn một chút rồi thử lại.');
+  const cache = CacheService.getScriptCache();
+  const n = Number(cache.get('regwin')) || 0;
+  if (n >= REG_LIMIT) throw new Error('Đang có quá nhiều đăng ký trong thời gian ngắn. Vui lòng thử lại sau 10 phút hoặc nhắn Zalo shop.');
+  cache.put('regwin', String(n + 1), 600);
+  if (n + 1 === REG_LIMIT) notifyOwner('⚠️ Có ' + REG_LIMIT + ' đăng ký mới trong 10 phút — có thể là spam. Kiểm tra tab KhachHang.');
+}
+
 function register(b) {
   const c = cleanCustomer(b);
   const pw = checkPassword(b.password);
+  checkRegSpam(b);
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {

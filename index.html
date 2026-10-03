@@ -351,6 +351,7 @@ function showAuth(mode = 'login', next) {
       ${reg ? `<label>Họ tên</label><input name="name" required maxlength="60" autocomplete="name" placeholder="Nguyễn Văn A">` : ''}
       <label>Số điện thoại / Zalo</label><input name="contact" required inputmode="tel" autocomplete="username" placeholder="09xx xxx xxx">
       ${reg ? `<label>Gmail</label><input name="email" type="email" required autocomplete="email" placeholder="ban@gmail.com">` : ''}
+      ${reg ? `<div style="position:absolute;left:-9999px" aria-hidden="true"><input name="website" tabindex="-1" autocomplete="off"></div><input type="hidden" name="formAt" value="${Date.now()}">` : ''}
       <label>Mật khẩu</label>${pwField('password', reg ? 'new-password' : 'current-password', reg ? 'Ít nhất 6 ký tự' : 'Mật khẩu của bạn')}
       <label class="chk"><input type="checkbox" name="remember" checked> Ghi nhớ đăng nhập trên máy này</label>
       <div class="err" id="aErr"></div>
@@ -369,7 +370,7 @@ function showAuth(mode = 'login', next) {
     btn.disabled = true; $('#aErr').textContent = '';
     try {
       const body = { action: reg ? 'register' : 'login', contact: f.get('contact'), password: f.get('password'), remember };
-      if (reg) { body.name = f.get('name'); body.email = f.get('email'); }
+      if (reg) { body.name = f.get('name'); body.email = f.get('email'); body.website = f.get('website') || ''; body.formAt = f.get('formAt'); }
       const r = await apiPost(body);
       setSession({ token: r.session, customer: r.customer }, remember);
       renderUser();
