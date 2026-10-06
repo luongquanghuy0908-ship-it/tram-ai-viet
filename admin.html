@@ -452,6 +452,41 @@ function renderProducts() {
   $('#productsTab').querySelectorAll('[data-sel]').forEach(c => c.onchange = () => { c.checked ? SEL.add(c.dataset.sel) : SEL.delete(c.dataset.sel); renderProducts(); });
   const clr = $('#pSelClear'); if (clr) clr.onclick = () => { SEL.clear(); renderProducts(); };
   const bd = $('#pBulkDel'); if (bd) bd.onclick = bulkDeleteProducts;
+  $('#productsTab').insertAdjacentHTML('beforeend', trashHtml());
+  bindTrash();
+}
+
+// ===== Thùng rác sản phẩm (xoá nhầm thì khôi phục) =====
+let TRASH_ITEMS = null, TSEL = new Set();
+function trashHtml() {
+  const head = `<div style="margin-top:22px"><button class="btn sm" id="tToggle">🗑 Thùng rác sản phẩm${TRASH_ITEMS ? ' (' + TRASH_ITEMS.length + ')' : ''} — ${TRASH_ITEMS ? 'ẩn' : 'xem & khôi phục'}</button></div>`;
+  if (!TRASH_ITEMS) return head;
+  const list = TRASH_ITEMS.map(t => `
+    <div class="oitem">
+      <div class="top"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;flex:1"><input type="checkbox" data-tsel="${t.row}" ${TSEL.has(t.row) ? 'checked' : ''} style="margin-top:4px;width:18px;height:18px"><span><b>${esc(t.name)}</b></span></label><b>${money(t.price)}</b></div>
+      <div class="meta">ID: <code>${esc(t.id)}</code> · Xoá lúc: ${esc(t.at)} · Số lượng còn: ${t.qty === null ? 'không giới hạn' : t.qty} · Đã bán: ${t.sold}</div>
+    </div>`).join('') || '<div class="card"><div class="empty">Thùng rác trống.</div></div>';
+  const btn = TSEL.size ? `<button class="btn pri block" id="tRestore" style="margin:10px 0">♻️ Khôi phục ${TSEL.size} sản phẩm đã chọn</button>` : '';
+  return head + `<div style="margin-top:10px">${list}${btn}</div>`;
+}
+function bindTrash() {
+  const tg = $('#tToggle');
+  if (tg) tg.onclick = async () => {
+    if (TRASH_ITEMS) { TRASH_ITEMS = null; TSEL.clear(); return renderProducts(); }
+    try { const r = await apiPost({ action: 'adminListTrash' }); TRASH_ITEMS = r.items; renderProducts(); }
+    catch (err) { toast(err.message); }
+  };
+  $('#productsTab').querySelectorAll('[data-tsel]').forEach(c => c.onchange = () => { const n = Number(c.dataset.tsel); c.checked ? TSEL.add(n) : TSEL.delete(n); renderProducts(); });
+  const rs = $('#tRestore');
+  if (rs) rs.onclick = async () => {
+    if (!confirm('Khôi phục ' + TSEL.size + ' sản phẩm đã chọn về danh sách bán?')) return;
+    rs.disabled = true;
+    try {
+      const r = await apiPost({ action: 'adminRestoreProducts', rows: [...TSEL] });
+      toast('Đã khôi phục ' + r.restored.length + ' sản phẩm' + (r.failed.length ? '. Không khôi phục được: ' + r.failed.join('; ') : ''));
+    } catch (err) { toast(err.message); }
+    TSEL.clear(); TRASH_ITEMS = null; loadProducts();
+  };
 }
 async function bulkDeleteProducts() {
   const ids = [...SEL];

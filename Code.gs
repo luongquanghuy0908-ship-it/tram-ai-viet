@@ -19,6 +19,9 @@ const SH = {
   tx: { name: 'GiaoDich', header: ['SePay ID', 'Thời gian', 'Số tiền', 'Nội dung CK', 'Mã đơn khớp', 'Kết quả'] },
 };
 
+// Thùng rác sản phẩm: mỗi lần xoá sản phẩm, bản sao được lưu ở đây (kèm thời gian xoá) để khôi phục
+const TRASH = { name: 'SanPhamDaXoa', get header() { return ['Thời gian xoá'].concat(SH.products.header); } };
+
 const ST = { PENDING: 'Chờ thanh toán', PAID: 'Đã thanh toán - chờ giao', DONE: 'Đã giao', SHORT: 'Chuyển thiếu' };
 const DS = { PENDING: 'Chờ thanh toán', DONE: 'Đã cộng ví', SHORT: 'Chuyển thiếu' };
 
@@ -199,6 +202,8 @@ function doPost(e) {
     if (body.action === 'adminListProducts') return json(adminListProducts(body));
     if (body.action === 'adminSaveProduct') return json(adminSaveProduct(body));
     if (body.action === 'adminDeleteProduct') return json(adminDeleteProduct(body));
+    if (body.action === 'adminListTrash') return json(adminListTrash(body));
+    if (body.action === 'adminRestoreProducts') return json(adminRestoreProducts(body));
     return json({ error: 'Yêu cầu không hợp lệ' });
   } catch (err) { return json({ error: String(err.message || err) }); }
 }
@@ -1170,9 +1175,53 @@ function adminDeleteProduct(b) {
     const sh = SpreadsheetApp.getActive().getSheetByName(SH.products.name);
     const data = sh.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === id) { sh.deleteRow(i + 1); return { ok: true }; }
+      if (String(data[i][0]) === id) {
+        // Lưu bản sao vào thùng rác trước khi xoá, để khôi phục nếu xoá nhầm
+        sheetOf(TRASH).appendRow([now()].concat(data[i]));
+        sh.deleteRow(i + 1);
+        return { ok: true };
+      }
     }
     throw new Error('Không tìm thấy sản phẩm');
+  } finally { lock.releaseLock(); }
+}
+
+// Thùng rác sản phẩm: danh sách sản phẩm đã xoá, chọn để khôi phục
+function adminListTrash(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const rows = sheetOf(TRASH).getDataRange().getValues();
+  const list = [];
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const r = rows[i];
+    list.push({ row: i + 1, at: fmtDate(r[0]), id: String(r[1]), name: String(r[3]), price: Number(r[5]) || 0, qty: qtyOf(r[12]), sold: Number(r[15]) || 0 });
+  }
+  return { items: list };
+}
+
+// Khôi phục sản phẩm từ thùng rác. rows = số dòng trong tab thùng rác. Bỏ qua (báo lỗi) nếu ID đã có sản phẩm mới cùng tên.
+function adminRestoreProducts(b) {
+  requireRole(b.session, [ROLE.ADMIN]);
+  const want = (Array.isArray(b.rows) ? b.rows : []).map(Number).filter(n => n > 1);
+  if (!want.length) throw new Error('Chưa chọn sản phẩm nào để khôi phục');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const trash = sheetOf(TRASH), prods = sheetOf(SH.products);
+    const trows = trash.getDataRange().getValues();
+    const liveIds = new Set(prods.getDataRange().getValues().slice(1).map(r => String(r[0])));
+    const restored = [], failed = [];
+    // Xử lý từ dưới lên để xoá dòng thùng rác không làm lệch số dòng còn lại
+    want.sort((a, b) => b - a).forEach(rowNo => {
+      const r = trows[rowNo - 1];
+      if (!r) return failed.push('dòng ' + rowNo + ' không còn trong thùng rác');
+      const id = String(r[1]);
+      if (liveIds.has(id)) return failed.push(id + ' (đã có sản phẩm cùng ID đang bán)');
+      prods.appendRow(r.slice(1, 16));
+      liveIds.add(id);
+      trash.deleteRow(rowNo);
+      restored.push(id);
+    });
+    return { ok: true, restored, failed };
   } finally { lock.releaseLock(); }
 }
 
