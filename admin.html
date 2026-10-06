@@ -428,13 +428,20 @@ async function loadProducts() {
     renderProducts();
   } catch (err) { $('#productsTab').innerHTML = `<div class="card"><div class="empty">${esc(err.message)}</div></div>`; }
 }
+// Chọn nhiều sản phẩm để xoá cùng lúc (đánh dấu từng sản phẩm, rồi bấm nút xoá ở trên)
+let SEL = new Set();
 function renderProducts() {
+  SEL = new Set([...SEL].filter(id => PRODUCTS.some(p => p.id === id)));
   $('#productsTab').innerHTML = `
     <button class="btn pri block" id="pAdd" style="margin-bottom:14px">+ Thêm sản phẩm mới</button>
+    <div id="pBulk" style="display:${SEL.size ? 'flex' : 'none'};gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px;padding:10px 14px;border:1px solid #f87171;border-radius:12px">
+      <span>Đã chọn <b>${SEL.size}</b> sản phẩm</span>
+      <div style="display:flex;gap:8px"><button class="btn sm" id="pSelClear">Bỏ chọn</button><button class="btn sm" id="pBulkDel" style="background:#dc2626;color:#fff">🗑 Xoá ${SEL.size} sản phẩm đã chọn</button></div>
+    </div>
     ${PRODUCTS.map(p => `
       <div class="oitem">
         <div class="top">
-          <div><b>${esc(p.name)}</b> ${p.visible ? '' : '<span class="st-badge st-short">Đang ẩn</span>'} ${p.qty !== null && p.qty <= 0 ? '<span class="st-badge st-short">Hết hàng</span>' : ''} ${p.deliver ? '<span class="st-badge st-done">🎁 Tự giao link</span>' : ''}</div>
+          <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;flex:1"><input type="checkbox" data-sel="${esc(p.id)}" ${SEL.has(p.id) ? 'checked' : ''} style="margin-top:4px;width:18px;height:18px"><span><b>${esc(p.name)}</b> ${p.visible ? '' : '<span class="st-badge st-short">Đang ẩn</span>'} ${p.qty !== null && p.qty <= 0 ? '<span class="st-badge st-short">Hết hàng</span>' : ''} ${p.deliver ? '<span class="st-badge st-done">🎁 Tự giao link</span>' : ''}</span></label>
           <b>${money(p.price)}</b>
         </div>
         <div class="meta">ID: <code>${esc(p.id)}</code> · ${esc(p.group)} · ${esc(p.duration)} · Số lượng còn: ${p.qty === null ? 'không giới hạn' : p.qty} · Đã bán: ${p.sold || 0}</div>
@@ -442,6 +449,22 @@ function renderProducts() {
       </div>`).join('') || '<div class="card"><div class="empty">Chưa có sản phẩm nào.</div></div>'}`;
   $('#pAdd').onclick = () => showProductForm(null);
   $('#productsTab').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => showProductForm(PRODUCTS.find(p => p.id === b.dataset.edit)));
+  $('#productsTab').querySelectorAll('[data-sel]').forEach(c => c.onchange = () => { c.checked ? SEL.add(c.dataset.sel) : SEL.delete(c.dataset.sel); renderProducts(); });
+  const clr = $('#pSelClear'); if (clr) clr.onclick = () => { SEL.clear(); renderProducts(); };
+  const bd = $('#pBulkDel'); if (bd) bd.onclick = bulkDeleteProducts;
+}
+async function bulkDeleteProducts() {
+  const ids = [...SEL];
+  const names = ids.map(id => (PRODUCTS.find(p => p.id === id) || {}).name || id);
+  if (!confirm('Xoá hẳn ' + ids.length + ' sản phẩm đã chọn?\n\n- ' + names.join('\n- ') + '\n\nĐơn hàng cũ vẫn giữ nguyên. Không hoàn tác được.')) return;
+  let done = 0, fail = [];
+  for (const id of ids) {
+    try { await apiPost({ action: 'adminDeleteProduct', id }); done++; }
+    catch (err) { fail.push(id + ' (' + err.message + ')'); }
+  }
+  SEL.clear();
+  toast('Đã xoá ' + done + ' sản phẩm' + (fail.length ? '. Lỗi: ' + fail.join(', ') : ''));
+  loadProducts();
 }
 function showProductForm(p) {
   const isNew = !p;
