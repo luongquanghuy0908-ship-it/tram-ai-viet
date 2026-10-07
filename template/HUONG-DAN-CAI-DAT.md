@@ -3,6 +3,7 @@
 Bạn chỉ cần một tài khoản Google. Không cần biết code, không cần thuê hosting hay tên miền.
 
 Khi xong bạn sẽ có:
+
 - **Web shop**: khách xem sản phẩm, quét mã QR chuyển khoản, nhận hàng tự động.
 - **Trang quản trị**: xem đơn, giao hàng, sửa sản phẩm, cộng/trừ ví khách.
 - **Google Sheet**: nơi lưu toàn bộ dữ liệu, tự sao lưu mỗi đêm.
@@ -23,6 +24,7 @@ Khi xong bạn sẽ có:
 3. Google hỏi quyền: bấm **Xem xét quyền** → chọn tài khoản Google của bạn.
 4. Nếu hiện **"Google chưa xác minh ứng dụng này"**: bấm **Nâng cao** → **Đi tới ... (không an toàn)** → **Cho phép**.
    Đây là bình thường: ứng dụng là của chính bạn, chạy trong tài khoản của bạn.
+
 5. Chờ dòng **"XONG"** hiện ở khung nhật ký bên dưới.
 
 ## Bước 3. Điền thông tin shop (5 phút)

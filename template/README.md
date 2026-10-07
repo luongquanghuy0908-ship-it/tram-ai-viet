@@ -12,6 +12,7 @@ Khách quét QR chuyển khoản, tiền về là hệ thống tự giao hàng. 
 | `CHO-NGUOI-BAN.md` | Cách tạo link "Tạo bản sao" và bán bản mẫu |
 
 Khác với shop đang chạy:
+
 - Không còn thông tin riêng (tài khoản ngân hàng, Zalo, link API). Mọi thứ điền ở tab **CauHinh** trong Sheet.
 - Web chạy thẳng trên link Apps Script (`/exec`), trang quản trị ở `/exec?trang=admin`.
 - Có menu **🛒 Shop → Xem link** và **Cấp quyền quản trị**, setup tự bật sao lưu hằng đêm.
