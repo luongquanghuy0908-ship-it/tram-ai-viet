@@ -364,9 +364,12 @@ function renderCustomerItems() {
   el.querySelectorAll('[data-resetpw]').forEach(b => b.onclick = async e => {
     e.stopPropagation();
     const phone = b.closest('.oitem').dataset.phone;
-    if (!confirm('Xoá mật khẩu của ' + phone + '? Khách cần vào web bấm "Tạo tài khoản" với đúng số này để đặt mật khẩu mới. Số dư ví và lịch sử đơn vẫn giữ nguyên.')) return;
+    if (!confirm('Đặt mật khẩu tạm cho ' + phone + '? Mật khẩu cũ sẽ hết dùng được và khách bị đăng xuất khỏi mọi máy. Số dư ví và lịch sử đơn vẫn giữ nguyên.')) return;
     b.disabled = true;
-    try { await apiPost({ action: 'adminResetPassword', phone }); toast('Đã xoá mật khẩu, báo khách đăng ký lại'); }
+    try {
+      const r = await apiPost({ action: 'adminResetPassword', phone });
+      prompt('Mật khẩu tạm của ' + phone + ' (gửi khách qua Zalo, khách đăng nhập rồi đổi bằng "Quên mật khẩu"):', r.tempPassword);
+    }
     catch (err) { toast(err.message); }
     b.disabled = false;
   });
